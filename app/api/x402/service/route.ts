@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
 import {OKXFacilitatorClient} from "@okxweb3/x402-core";
 import {x402ResourceServer} from "@okxweb3/x402-core/server";
-import {ExactEvmScheme} from "@okxweb3/x402-evm";
+import {ExactEvmScheme} from "@okxweb3/x402-evm/exact/server";
 import {withX402} from "@okxweb3/x402-next";
 
 export const dynamic="force-dynamic";
