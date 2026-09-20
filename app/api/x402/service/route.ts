@@ -6,12 +6,20 @@ import {withX402} from "@okxweb3/x402-next";
 
 export const dynamic="force-dynamic";
 
-const NETWORK="eip155:196";
+const MAINNET="eip155:196";
+const TESTNET="eip155:1952";
+const NETWORK=process.env.XAVERUS_X402_NETWORK||MAINNET;
+
+if(NETWORK!==MAINNET&&NETWORK!==TESTNET){
+  throw new Error("XAVERUS_X402_NETWORK must be eip155:196 (mainnet) or eip155:1952 (testnet).");
+}
+
+const networkLabel=NETWORK===TESTNET?"X Layer Testnet":"X Layer";
 
 const handler=async()=>NextResponse.json({
   ok:true,
   service:"Xaverus x402 Safety Service",
-  network:"X Layer",
+  network:networkLabel,
   caip2:NETWORK,
   message:"Paid safety-service response delivered after x402 verification.",
   timestamp:new Date().toISOString()
@@ -25,7 +33,7 @@ function disabled(){
     ok:false,
     service:"Xaverus x402 Safety Service",
     mode:"not-configured",
-    network:"X Layer",
+    network:networkLabel,
     caip2:NETWORK,
     price:process.env.XAVERUS_X402_PRICE||"$0.01",
     message:"x402 seller service is intentionally disabled until OKX credentials and a recipient wallet are configured server-side."
