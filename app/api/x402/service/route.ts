@@ -4,11 +4,11 @@ import {x402ResourceServer} from "@okxweb3/x402-core/server";
 import {ExactEvmScheme} from "@okxweb3/x402-evm";
 import {withX402} from "@okxweb3/x402-next";
 
-export const dynamic = "force-dynamic";
+export const dynamic="force-dynamic";
 
-const NETWORK = "eip155:196";
+const NETWORK="eip155:196";
 
-const handler = async () => NextResponse.json({
+const handler=async()=>NextResponse.json({
   ok:true,
   service:"Xaverus x402 Safety Service",
   network:"X Layer",
@@ -17,24 +17,46 @@ const handler = async () => NextResponse.json({
   timestamp:new Date().toISOString()
 });
 
-const enabled = process.env.XAVERUS_X402_ENABLED === "true";
-const configured = Boolean(
-  process.env.OKX_API_KEY &&
-  process.env.OKX_API_SECRET &&
-  process.env.OKX_API_PASSPHRASE &&
-  process.env.XAVERUS_PAY_TO_ADDRESS
-);
+const enabled=process.env.XAVERUS_X402_ENABLED==="true";
+const configured=Boolean(process.env.OKX_API_KEY&&process.env.OKX_API_SECRET&&process.env.OKX_API_PASSPHRASE&&process.env.XAVERUS_PAY_TO_ADDRESS);
 
-export const GET = enabled && configured
-  ? withX402(
+function disabled(){
+  return NextResponse.json({
+    ok:false,
+    service:"Xaverus x402 Safety Service",
+    mode:"not-configured",
+    network:"X Layer",
+    caip2:NETWORK,
+    price:process.env.XAVERUS_X402_PRICE||"$0.01",
+    message:"x402 seller service is intentionally disabled until OKX credentials and a recipient wallet are configured server-side."
+  },{status:503});
+}
+
+if(!enabled||!configured){
+  // Keep the route dependency-safe and demo-safe. No OKX client is created without credentials.
+} else {
+  const facilitator=new OKXFacilitatorClient({
+    apiKey:process.env.OKX_API_KEY!,
+    secretKey:process.env.OKX_API_SECRET!,
+    passphrase:process.env.OKX_API_PASSPHRASE!
+  });
+  const server=new x402ResourceServer(facilitator).register(NETWORK,new ExactEvmScheme());
+  // withX402 returns HTTP 402 until a valid payment is verified/settled.
+  // The handler itself never handles private keys.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+}
+
+export const GET=(!enabled||!configured)
+  ? async()=>disabled()
+  : withX402(
       handler,
       {
-        accepts: [{
+        accepts:{
           scheme:"exact",
           network:NETWORK,
           payTo:process.env.XAVERUS_PAY_TO_ADDRESS!,
-          price:process.env.XAVERUS_X402_PRICE || "$0.01"
-        }],
+          price:process.env.XAVERUS_X402_PRICE||"$0.01"
+        },
         description:"Xaverus server-side safety service",
         mimeType:"application/json"
       },
@@ -45,13 +67,4 @@ export const GET = enabled && configured
           passphrase:process.env.OKX_API_PASSPHRASE!
         })
       ).register(NETWORK,new ExactEvmScheme())
-    )
-  : async () => NextResponse.json({
-      ok:false,
-      service:"Xaverus x402 Safety Service",
-      mode:"not-configured",
-      network:"X Layer",
-      caip2:NETWORK,
-      price:process.env.XAVERUS_X402_PRICE || "$0.01",
-      message:"x402 seller service is intentionally disabled until OKX credentials and a recipient wallet are configured server-side."
-    },{status:503});
+    );
