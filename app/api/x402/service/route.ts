@@ -32,20 +32,6 @@ function disabled(){
   },{status:503});
 }
 
-if(!enabled||!configured){
-  // Keep the route dependency-safe and demo-safe. No OKX client is created without credentials.
-} else {
-  const facilitator=new OKXFacilitatorClient({
-    apiKey:process.env.OKX_API_KEY!,
-    secretKey:process.env.OKX_API_SECRET!,
-    passphrase:process.env.OKX_API_PASSPHRASE!
-  });
-  const server=new x402ResourceServer(facilitator).register(NETWORK,new ExactEvmScheme());
-  // withX402 returns HTTP 402 until a valid payment is verified/settled.
-  // The handler itself never handles private keys.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-}
-
 export const GET=(!enabled||!configured)
   ? async()=>disabled()
   : withX402(
