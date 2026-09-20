@@ -1,0 +1,2 @@
+import {NextResponse} from "next/server";
+export async function GET(){return NextResponse.json({name:"Xaverus Safety Passport",description:"A user-controlled safety service for autonomous agents: evaluates payment intent against per-transaction and daily spending policies before execution.",serviceType:"A2MCP",billing:"free",endpoint:"/api/agent/safety-check",method:"POST",network:"X Layer (eip155:196)",capabilities:["policy-check","spend-cap","approval-gate","kill-switch-compatible","proof-of-action-ready"],production:{execution:false,secretsClientSide:false}});}
