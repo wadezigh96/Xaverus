@@ -1,27 +1,31 @@
 "use client";
-import {useMemo,useState} from "react";
-import {DEFAULT_POLICY,evaluatePayment,SafetyPolicy} from "../lib/safety";
 
-type Event={time:string;action:string;amount?:number;status:string;tx?:string};
+import {useEffect,useMemo,useState} from "react";
+import Link from "next/link";
+
+type Agent={id:string;name:string;category:string;description:string;network:string;service:string;price:string;tags:string[]};
+
+const AGENTS:Agent[]=[
+ {id:"treasury-router",name:"Treasury Router",category:"FINANCE",description:"Routes approved treasury payment intents through a controlled execution boundary.",network:"X Layer",service:"A2MCP",price:"$0.01 / execution",tags:["Payment","Policy-aware","X Layer"]},
+ {id:"data-sentinel",name:"Data Sentinel",category:"INTELLIGENCE",description:"Returns verified service results behind a machine-to-machine payment boundary.",network:"X Layer",service:"x402",price:"$0.01 / request",tags:["x402","Data","Agent"]},
+ {id:"ops-guardian",name:"Ops Guardian",category:"OPERATIONS",description:"Monitors agent operations and surfaces policy exceptions before action.",network:"X Layer",service:"A2MCP",price:"Free",tags:["Monitoring","Safety","A2MCP"]}
+];
+
 export default function Home(){
- const [policy,setPolicy]=useState<SafetyPolicy>(DEFAULT_POLICY); const [amount,setAmount]=useState("0.80"); const [spent,setSpent]=useState(0); const [events,setEvents]=useState<Event[]>([]); const [approved,setApproved]=useState(false); const [checking,setChecking]=useState(false);
- const result=useMemo(()=>evaluatePayment(Number(amount),spent,policy),[amount,spent,policy]);
- async function run(){
-  if(checking)return;
-  setChecking(true);
-  try{
-   const response=await fetch("/api/agent/safety-check",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({amount:Number(amount),spentToday:spent,policy})});
-   const data=await response.json();
-   if(!response.ok||!data.ok){setEvents(e=>[{time:new Date().toLocaleTimeString(),action:"Safety check error",status:data.error??"REQUEST_FAILED"},...e]);return;}
-   if(!data.decision.allowed){setEvents(e=>[{time:new Date().toLocaleTimeString(),action:"Payment blocked",status:data.decision.reason},...e]);return;}
-   if(policy.approvalRequired&&!approved){setEvents(e=>[{time:new Date().toLocaleTimeString(),action:"Approval required",amount:Number(amount),status:"WAITING_FOR_USER"},...e]);return;}
-   setSpent(v=>v+Number(amount));setApproved(false);setEvents(e=>[{time:new Date().toLocaleTimeString(),action:"Agent payment",amount:Number(amount),status:"SIMULATED_OK",tx:"demo_xlayer_tx_"+Math.random().toString(16).slice(2,10)},...e]);
-  }finally{setChecking(false);}
- }
- function activate(){setPolicy(p=>({...p,enabled:true}));setEvents(e=>[{time:new Date().toLocaleTimeString(),action:"Passport activated",status:"ACTIVE"},...e]);}
- function kill(){setPolicy(p=>({...p,enabled:false}));setApproved(false);setEvents(e=>[{time:new Date().toLocaleTimeString(),action:"Kill switch",status:"STOPPED"},...e]);}
- return <main><nav><div className="brand">XAVERUS<span>SAFE AGENT PASSPORT</span></div><div className="pill">OKX / X LAYER · DEMO SAFE MODE</div></nav><section className="hero"><div><div className="eyebrow">USER-CONTROLLED AGENT SAFETY</div><h1>Let agents act.<br/><em>You keep the keys.</em></h1><p>Xaverus gives every user a personal policy layer for autonomous payments: limits, approval gates, kill switch and proof-of-action history.</p><button className="primary" onClick={activate}>Activate Passport</button></div><div className="passport"><div className="passportTop"><span>SAFETY PASSPORT</span><b>{policy.enabled?"ACTIVE":"STOPPED"}</b></div><div className="ring">{policy.enabled?"✓":"!"}</div><div className="passportId">LOCAL DEMO ID<br/><strong>XAV-{typeof window!=="undefined"?window.location.hostname.toUpperCase():"USER"}-01</strong></div><div className="checks"><span>✓ Spend policy</span><span>✓ Approval gate</span><span>✓ Kill switch</span><span>✓ Audit trail</span></div></div></section>
- <section className="grid"><div className="card"><div className="cardHead"><h2>Safety policy</h2><span className="status">{policy.enabled?"ENFORCED":"STOPPED"}</span></div><label>Max per transaction <input type="number" value={policy.perTx} onChange={e=>setPolicy({...policy,perTx:Number(e.target.value)})}/><small>USDC</small></label><label>Daily spend cap <input type="number" value={policy.daily} onChange={e=>setPolicy({...policy,daily:Number(e.target.value)})}/><small>USDC</small></label><label className="toggle"><input type="checkbox" checked={policy.approvalRequired} onChange={e=>setPolicy({...policy,approvalRequired:e.target.checked})}/><span>Require user approval</span></label><label className="toggle"><input type="checkbox" checked={policy.autoStop} onChange={e=>setPolicy({...policy,autoStop:e.target.checked})}/><span>Auto-stop on policy violation</span></label><button className="danger" onClick={kill}>⏹ Kill switch</button></div>
- <div className="card"><div className="cardHead"><h2>Agent payment</h2><span className={result.allowed?"status":"status bad"}>{result.allowed?"POLICY OK":"BLOCKED"}</span></div><div className="task">Agent task <b>Pay data-service for verified result</b><span>Agent → Service · X Layer · USDC</span></div><label>Amount <input value={amount} onChange={e=>setAmount(e.target.value)}/><small>USDC</small></label><div className="preview"><span>Intent preview</span><strong>{result.reason}</strong><div><span>Spent today</span><b>{spent.toFixed(2)} / {policy.daily.toFixed(2)} USDC</b></div></div>{policy.approvalRequired&&!approved&&result.allowed&&<button className="approve" onClick={()=>setApproved(true)}>Approve this intent</button>}<button className="primary wide" onClick={run}>{checking?"Checking policy…":approved||!policy.approvalRequired?"Execute agent payment":"Simulate & request approval"}</button></div>
- <div className="card audit"><div className="cardHead"><h2>Proof-of-action</h2><span>{events.length} EVENTS</span></div>{events.length===0?<div className="empty">No actions yet. Every server-side decision will appear here.</div>:events.map((e,i)=><div className="event" key={i}><div><b>{e.action}</b><span>{e.time}{e.tx?" · "+e.tx:""}</span></div><strong className={e.status.includes("OK")?"good":e.status.includes("WAIT")?"wait":"bad"}>{e.status}</strong></div>)}</div></section>
- <footer><span>XAVERUS · SAFE AGENT PASSPORT</span><span>Built for OKX Dev Day · Demo-safe architecture</span></footer></main>}
+ const [pass,setPass]=useState(false);
+ const [query,setQuery]=useState("");
+ const [active,setActive]=useState<Agent|null>(null);
+ useEffect(()=>setPass(localStorage.getItem("xaverus_launch_pass")==="active"),[]);
+ const filtered=useMemo(()=>AGENTS.filter(a=>(a.name+" "+a.category+" "+a.description+" "+a.tags.join(" ")).toLowerCase().includes(query.toLowerCase())),[query]);
+ function launchPass(){localStorage.setItem("xaverus_launch_pass","active");setPass(true);}
+ return <main className="market">
+  <nav className="topnav"><Link href="/" className="brand">XAVERUS<span>AGENT MARKETPLACE</span></Link><div className="navlinks"><a className="active" href="/marketplace">Marketplace</a><a href="/agents">My Agents</a><a href="/safety">Safety</a><a href="/activity">Activity</a></div><div className="navright"><span className={pass?"live":"pill"}>{pass?"LAUNCH PASS ACTIVE":"$2 LAUNCH PASS"}</span></div></nav>
+  <section className="marketHero"><div><div className="eyebrow">USER-CONTROLLED AGENT MARKETPLACE</div><h1>Discover agents.<br/><em>Activate with control.</em></h1><p>Find autonomous services and give them bounded access through Xaverus Safety Passport — spend limits, approval gates and an emergency stop before execution.</p><div className="heroActions">{pass?<a className="primary" href="#agents">Explore agents</a>:<button className="primary" onClick={launchPass}>Get Launch Pass — $2</button>}<a className="secondary" href="/safety">View Safety Passport</a></div></div><div className="launchCard"><span>LAUNCH PASS</span><strong>{pass?"ACTIVE":"$2"}</strong><p>{pass?"Marketplace access enabled.":"One-time launch access for the Xaverus marketplace."}</p><div className="featureList"><span>✓ Agent marketplace</span><span>✓ Agent credential</span><span>✓ Safety controls</span><span>✓ Activity history</span></div></div></section>
+  <section id="agents" className="section"><div className="sectionHead"><div><div className="eyebrow">CURATED AGENTS</div><h2>Agent Marketplace</h2></div><input className="search" placeholder="Search agents..." value={query} onChange={e=>setQuery(e.target.value)}/></div>
+   <div className="agentGrid">{filtered.map(agent=><article className="agentCard" key={agent.id}><div className="agentTop"><span className="agentIcon">{agent.name.slice(0,1)}</span><span className="available">● AVAILABLE</span></div><span className="category">{agent.category}</span><h3>{agent.name}</h3><p>{agent.description}</p><div className="tags">{agent.tags.map(t=><span key={t}>{t}</span>)}</div><div className="agentMeta"><span>{agent.network} · {agent.service}</span><b>{agent.price}</b></div><button className="outline" onClick={()=>setActive(agent)}>View agent</button></article>)}</div>
+  </section>
+  <section className="controlBand"><div><div className="eyebrow">EVERY AGENT GETS A SAFETY BOUNDARY</div><h2>Marketplace access without giving up policy control.</h2></div><div className="controls"><span>Spend Cap</span><span>Daily Limit</span><span>Approval Gate</span><span>Kill Switch</span></div></section>
+  <footer><span>XAVERUS · AGENT MARKETPLACE</span><span>OKX AI · A2MCP · x402 · X LAYER</span></footer>
+  {active&&<div className="modal" onClick={()=>setActive(null)}><div className="modalCard" onClick={e=>e.stopPropagation()}><button className="close" onClick={()=>setActive(null)}>×</button><span className="category">{active.category}</span><h2>{active.name}</h2><p>{active.description}</p><div className="detailRows"><div><span>NETWORK</span><b>{active.network}</b></div><div><span>SERVICE</span><b>{active.service}</b></div><div><span>PRICING</span><b>{active.price}</b></div></div><div className="safetyBox"><b>SAFETY COMPATIBLE</b><span>Spend cap · Approval gate · Kill switch</span></div>{pass?<button className="primary wide">Activate agent</button>:<button className="primary wide" onClick={launchPass}>Get Launch Pass — $2</button>}</div></div>}
+ </main>
+}
