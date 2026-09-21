@@ -77,10 +77,16 @@ The safety layer is defense-in-depth and does not claim perfect security.
 7. Show the x402 payment flow as a separate service/payment demonstration.
 8. Explain that the safety service is decision-only and does not directly sign transactions.
 
+## Marketplace MVP
+
+The production UI now includes a curated agent marketplace, agent detail flow, My Agents, Safety Passport, and Activity views. Launch Pass is represented in the UI without exposing a launch price; its payment backend remains intentionally disabled until the x402 launch-pass contract is revalidated against the installed OKX SDK version.
+
 ## Submission status
 
 - Public GitHub repository: complete
 - Live service: complete
+- Marketplace UI: complete
+- Production deployment: READY
 - OKX AI ASP registration: complete
 - A2MCP service registration: complete
 - Listing review: pending
