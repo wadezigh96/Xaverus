@@ -1,0 +1,2 @@
+import {NextResponse} from "next/server";
+export async function GET(){return NextResponse.json({name:"Xaverus Launch Pass",type:"x402",price:process.env.XAVERUS_LAUNCH_PASS_PRICE||"$2",network:process.env.XAVERUS_LAUNCH_PASS_NETWORK||"eip155:1952",endpoint:"/api/launch-pass",credential:"opaque signed credential, shown once",status:process.env.XAVERUS_LAUNCH_PASS_ENABLED==="true"?"enabled":"disabled"});}
