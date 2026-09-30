@@ -23,6 +23,6 @@ export async function POST(request:Request){
   seen.set(intentHash,now+REPLAY_TTL_MS);
   return NextResponse.json({ok:true,service:"Xaverus Safety Passport",requestId,intentHash,decision,
     intent:{amount,asset,network,recipient:recipient??null,approvalRequired:policy.approvalRequired},
-    safety:{policyEvaluatedServerSide:true,clientPolicyAccepted:false,spentTodaySource:"server-configuration",replayGuard:"process-local-10m",executionPerformed:false,mode:"decision-only"}});
+    safety:{policyEvaluatedServerSide:true,clientPolicyAccepted:false,spentTodaySource:"upstash-durable-ledger",replayGuard:"process-local-10m",executionPerformed:false,mode:"decision-only"}});
  }catch{return NextResponse.json({ok:false,error:"Invalid JSON."},{status:400});}
 }
