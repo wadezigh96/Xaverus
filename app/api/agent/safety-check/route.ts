@@ -1,6 +1,6 @@
 import {NextResponse} from "next/server";
 import {createHash} from "node:crypto";
-import {evaluatePayment,getServerPolicy} from "../../../../lib/safety";
+import {evaluatePayment,getServerPolicy} from "../../../../lib/safety";\nimport {getSpentToday} from "../../../../lib/spend-ledger";
 export const dynamic="force-dynamic";
 const seen=new Map<string,number>();
 const REPLAY_TTL_MS=10*60*1000;
@@ -9,7 +9,7 @@ export async function POST(request:Request){
  try{
   const body=await request.json();
   const amount=Number(body.amount);
-  const spentToday=Number(process.env.XAVERUS_SPENT_TODAY??0);
+  const spentToday=await getSpentToday();
   const asset=String(body.asset??"USDC");
   const network=String(body.network??"X Layer");
   const recipient=body.recipient?String(body.recipient):undefined;
