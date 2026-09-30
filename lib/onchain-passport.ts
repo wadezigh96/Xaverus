@@ -84,7 +84,7 @@ export async function readOnchainPolicy(): Promise<OnchainPolicy> {
   };
 }
 
-export async function buildOnchainAuthorization(args: {
+export async function readRecipientAllowed(recipient: string) {\n  const address = addressFromEnv();\n  const c = client();\n  return Boolean(await c.readContract({\n    address,\n    abi: XAVERUS_PASSPORT_ABI,\n    functionName: "recipientAllowed",\n    args: [getAddress(recipient)],\n  }));\n}\n\nexport async function buildOnchainAuthorization(args: {
   requestId: string;
   amount: number;
   recipient: string;
@@ -122,8 +122,8 @@ export async function readAuthorizationLogs(limit = 50) {
   const deploymentBlock = process.env.XAVERUS_PASSPORT_DEPLOYMENT_BLOCK;
   const logs = await c.getLogs({
     address,
-    event: XAVERUS_PASSPORT_ABI[11],
-    fromBlock: deploymentBlock ? BigInt(deploymentBlock) : "latest",
+    event: XAVERUS_PASSPORT_ABI[10],
+    fromBlock: deploymentBlock ? BigInt(deploymentBlock) : 0n,
     toBlock: "latest",
   });
   return logs.slice(-Math.max(1, Math.min(100, Math.floor(limit)))).reverse().map((log) => ({
