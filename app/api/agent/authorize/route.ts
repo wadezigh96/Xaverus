@@ -31,7 +31,7 @@ export async function POST(request:Request){
     if(!decision.allowed)
       return NextResponse.json({ok:true,decision,intentHash,executionPerformed:false,mode:"authorization-decision"});
 
-    const reservation=await reserveSpend({requestId,intentHash,amount,daily:policy.daily});
+    const reservation=await reserveSpend({requestId,intentHash,amount,daily:policy.daily,activity:{type:"authorization.reserved",requestId,intentHash,amount,asset,network,recipient:recipient??null,executionPerformed:false,executionBoundary:"external-wallet"}});
     if(reservation.status==="blocked")
       return NextResponse.json({ok:true,decision:{allowed:false,reason:"Daily spend limit was reached before reservation."},intentHash,ledger:reservation,executionPerformed:false},{status:409});
     if(reservation.status==="replayed"){
