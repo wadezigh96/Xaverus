@@ -34,6 +34,13 @@ export async function POST(request:Request){
     const reservation=await reserveSpend({requestId,intentHash,amount,daily:policy.daily});
     if(reservation.status==="blocked")
       return NextResponse.json({ok:true,decision:{allowed:false,reason:"Daily spend limit was reached before reservation."},intentHash,ledger:reservation,executionPerformed:false},{status:409});
+    if(reservation.status==="replayed"){
+      try{
+        const prior=JSON.parse(reservation.record||"{}") as {intentHash?:string;amount?:number};
+        if(prior.intentHash!==intentHash||prior.amount!==amount)
+          return NextResponse.json({ok:false,error:"Request-ID was already used for a different intent."},{status:409});
+      }catch{return NextResponse.json({ok:false,error:"Stored idempotency record is invalid."},{status:503});}
+    }
     return NextResponse.json({ok:true,decision,authorization:{status:reservation.status,intentHash,spentToday:reservation.spentToday},executionPerformed:false,executionBoundary:"external-wallet"});
   }catch(error){
     return NextResponse.json({ok:false,error:error instanceof Error?error.message:"Authorization service unavailable."},{status:503});
