@@ -51,7 +51,7 @@ That means an on-chain authorization receipt is not itself proof that a token tr
 Deploy `contracts/XaverusPassport.sol` from the wallet that should own the Safety Passport.
 
 For the current default policy, the constructor values are:
-- `asset_`: the X Layer USDC contract address
+- `asset_`: `0xB6CEceAB302E2E4948951eE7843FC24e92933061` (native USDC on X Layer mainnet)
 - `perTxLimit_`: `5000000` (5 USDC)
 - `dailyLimit_`: `25000000` (25 USDC)
 
