@@ -65,3 +65,9 @@ export async function getActivity(limit=50){
   if(!Array.isArray(value))return [];
   return value.map((item)=>{try{return JSON.parse(String(item));}catch{return {type:"invalid.activity.record"};}});
 }
+
+export async function appendActivity(event:Record<string,unknown>){
+  const payload=JSON.stringify(event);
+  const result=await command(["EVAL","redis.call(\"LPUSH\",KEYS[1],ARGV[1]);redis.call(\"LTRIM\",KEYS[1],0,99);return 1","1","xaverus:activity",payload]);
+  if(Number(result)!==1)throw new Error("Activity ledger write failed.");
+}
