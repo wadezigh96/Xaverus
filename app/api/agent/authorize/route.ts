@@ -31,6 +31,8 @@ export async function POST(request:Request){
       return NextResponse.json({ok:false,error:"Transaction exceeds the on-chain per-transaction limit.",intentHash},{status:409});
     if(policy.spentToday+amount>policy.daily)
       return NextResponse.json({ok:false,error:"Transaction exceeds the on-chain daily spending limit.",intentHash},{status:409});
+    if(policy.allowlistEnabled && !(await readRecipientAllowed(recipient)))
+      return NextResponse.json({ok:false,error:"Recipient is not in the on-chain Safety Passport allowlist.",intentHash},{status:409});
 
     const tx=await buildOnchainAuthorization({requestId,amount,recipient,walletAddress});
     return NextResponse.json({ok:true,decision:{allowed:true,reason:"On-chain policy checks passed; wallet signature required."},
