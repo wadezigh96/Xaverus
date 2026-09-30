@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
 import {createHash} from "node:crypto";
 import {evaluatePayment,getServerPolicy} from "../../../../lib/safety";
-import {getSpentToday,reserveSpend} from "../../../../lib/spend-ledger";
+import {appendActivity,getSpentToday,reserveSpend} from "../../../../lib/spend-ledger";
 
 export const dynamic="force-dynamic";
 
@@ -28,8 +28,10 @@ export async function POST(request:Request){
     const intent={amount,asset,network,recipient};
     const intentHash=createHash("sha256").update(JSON.stringify({requestId,...intent})).digest("hex");
     const decision=evaluatePayment({...intent,spentToday},policy);
-    if(!decision.allowed)
+    if(!decision.allowed){
+      await appendActivity({type:"authorization.denied",requestId,intentHash,amount,asset,network,recipient:recipient??null,reason:decision.reason,executionPerformed:false});
       return NextResponse.json({ok:true,decision,intentHash,executionPerformed:false,mode:"authorization-decision"});
+    }
 
     const reservation=await reserveSpend({requestId,intentHash,amount,daily:policy.daily,activity:{type:"authorization.reserved",requestId,intentHash,amount,asset,network,recipient:recipient??null,executionPerformed:false,executionBoundary:"external-wallet"}});
     if(reservation.status==="blocked")
