@@ -84,7 +84,18 @@ export async function readOnchainPolicy(): Promise<OnchainPolicy> {
   };
 }
 
-export async function readRecipientAllowed(recipient: string) {\n  const address = addressFromEnv();\n  const c = client();\n  return Boolean(await c.readContract({\n    address,\n    abi: XAVERUS_PASSPORT_ABI,\n    functionName: "recipientAllowed",\n    args: [getAddress(recipient)],\n  }));\n}\n\nexport async function buildOnchainAuthorization(args: {
+export async function readRecipientAllowed(recipient: string) {
+  const address = addressFromEnv();
+  const c = client();
+  return Boolean(await c.readContract({
+    address,
+    abi: XAVERUS_PASSPORT_ABI,
+    functionName: "recipientAllowed",
+    args: [getAddress(recipient)],
+  }));
+}
+
+export async function buildOnchainAuthorization(args: {
   requestId: string;
   amount: number;
   recipient: string;
