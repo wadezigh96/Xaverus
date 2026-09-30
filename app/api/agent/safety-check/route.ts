@@ -1,6 +1,6 @@
 import {NextResponse} from "next/server";
 import {createHash} from "node:crypto";
-import {readOnchainPolicy} from "../../../../lib/onchain-passport";
+import {readOnchainPolicy,readRecipientAllowed} from "../../../../lib/onchain-passport";
 
 export const dynamic="force-dynamic";
 
@@ -38,11 +38,7 @@ export async function POST(request:Request){
         decision:{allowed:false,reason:"Network is not allowed by the on-chain Safety Passport."},
         safety:{policySource:"xlayer-onchain",executionPerformed:false,mode:"decision-only"}});
 
-    const recipientAllowed=!policy.allowlistEnabled || (recipient ? await (async()=>{
-      const {createPublicClient,http}=await import("viem");
-      const c=createPublicClient({chain:{id:196,name:"X Layer",nativeCurrency:{name:"OKB",symbol:"OKB",decimals:18},rpcUrls:{default:{http:[process.env.XAVERUS_RPC_URL||"https://rpc.xlayer.tech"]}}},transport:http(process.env.XAVERUS_RPC_URL||"https://rpc.xlayer.tech")});
-      return Boolean(await c.readContract({address:policy.owner,abi:[],functionName:"recipientAllowed"}).catch(()=>false));
-    })() : false);
+    const recipientAllowed=!policy.allowlistEnabled || Boolean(recipient && await readRecipientAllowed(recipient));
 
     let decision:{allowed:boolean;reason:string};
     if(amount>policy.perTx) decision={allowed:false,reason:"Transaction exceeds the on-chain per-transaction limit."};
