@@ -1,30 +1,58 @@
 # P0 Safety Passport hardening
 
-This branch makes the policy endpoint server-authoritative.
+The P0 safety state now lives on the **X Layer mainnet Safety Passport contract**.
 
 Changes:
-- Request bodies cannot override spend limits, kill switch state, approval requirement, asset, or network.
-- spentToday is read from the durable Upstash ledger, not supplied by the caller.
-- Asset and network are checked against the server policy.
-- Optional recipient allowlisting is enforced server-side.
-- Every check requires a unique X-Xaverus-Request-ID.
-- A process-local replay guard rejects duplicate intent hashes for 10 minutes.
-- /api/agent/passport exposes active policy without secrets.
-- The API remains decision-only and does not sign or move funds.
+- Spend limits are read from on-chain policy.
+- Daily spend is read from on-chain state.
+- Kill switch is enforced by the contract.
+- Asset and recipient rules are enforced by the contract.
+- Authorization consumes daily budget atomically on-chain.
+- Request IDs are hashed to bytes32 and cannot be authorized twice.
+- The owner wallet is the approval authority.
+- Xaverus never stores a private key and never broadcasts the approval transaction.
+- Activity is read from the contract's AuthorizationRecorded events.
+- Browser-supplied policy values are ignored.
 
-Production gate:
-The current durable ledger is global to the Xaverus deployment. Before autonomous execution or multi-tenant use, scope spend and idempotency keys to a server-authenticated passport/agent identity; do not accept an arbitrary browser-supplied scope as identity.
+## On-chain boundary
 
+Network: **X Layer mainnet · chain 196**
 
-## Durable authorization boundary
+RPC: `https://rpc.xlayer.tech`
 
-`POST /api/agent/authorize` is the server-side authorization boundary. It requires `XAVERUS_APPROVAL_SECRET`, reloads the server policy, reads today's durable spend from Upstash Redis, re-evaluates the intent, and atomically reserves the amount with a request-ID idempotency record.
+Required:
+- `XAVERUS_PASSPORT_CONTRACT`
+- `XAVERUS_RPC_URL` (defaults to the public X Layer RPC)
 
-The ledger uses micro-USDC integer units and a Redis server-side script so concurrent requests cannot both consume the same remaining daily budget. Authorization still does not sign or broadcast funds.
+Optional:
+- `XAVERUS_PASSPORT_DEPLOYMENT_BLOCK` to bound activity-log reads.
 
-Required server-only variables:
-- `UPSTASH_REDIS_REST_URL`
-- `UPSTASH_REDIS_REST_TOKEN`
-- `XAVERUS_APPROVAL_SECRET`
+The contract stores limits in the configured token's smallest units. The current Xaverus UI uses USDC-style 6-decimal amounts.
 
-If Redis or the approval secret is missing, authorization fails closed with HTTP 503. `XAVERUS_SPENT_TODAY` remains only for the decision-only preview compatibility path and is not used for authorization.
+## Authorization flow
+
+1. `POST /api/agent/safety-check` reads the current policy and spend from X Layer.
+2. `POST /api/agent/authorize` re-checks the same on-chain state.
+3. Xaverus returns transaction calldata for `XaverusPassport.authorize(...)`.
+4. The user's external wallet signs and broadcasts that transaction.
+5. The contract atomically records the authorization and consumes the daily budget.
+6. Activity is reconstructed from the on-chain event.
+
+No Redis spend ledger or server approval secret is required for this flow.
+
+## Important boundary
+
+The contract is a **policy/authorization ledger**, not the user's token wallet. It does not transfer USDC and does not hold private keys. The actual token execution remains at the external wallet boundary.
+
+That means an on-chain authorization receipt is not itself proof that a token transfer happened. A later proof-of-action step should link the authorization request ID to the actual transaction hash.
+
+## Deployment
+
+Deploy `contracts/XaverusPassport.sol` from the wallet that should own the Safety Passport.
+
+For the current default policy, the constructor values are:
+- `asset_`: the X Layer USDC contract address
+- `perTxLimit_`: `5000000` (5 USDC)
+- `dailyLimit_`: `25000000` (25 USDC)
+
+Do not put a private key in the repository or Vercel environment for this contract. The owner wallet signs the authorization transaction externally.
