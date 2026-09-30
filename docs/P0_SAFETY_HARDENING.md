@@ -4,7 +4,7 @@ This branch makes the policy endpoint server-authoritative.
 
 Changes:
 - Request bodies cannot override spend limits, kill switch state, approval requirement, asset, or network.
-- spentToday is read from server configuration, not supplied by the caller.
+- spentToday is read from the durable Upstash ledger, not supplied by the caller.
 - Asset and network are checked against the server policy.
 - Optional recipient allowlisting is enforced server-side.
 - Every check requires a unique X-Xaverus-Request-ID.
@@ -13,7 +13,7 @@ Changes:
 - The API remains decision-only and does not sign or move funds.
 
 Production gate:
-XAVERUS_SPENT_TODAY is temporary server configuration, not a durable ledger. Before autonomous execution, replace it with a persistent per-passport spend ledger and make approval state server-authoritative.
+The current durable ledger is global to the Xaverus deployment. Before autonomous execution or multi-tenant use, scope spend and idempotency keys to a server-authenticated passport/agent identity; do not accept an arbitrary browser-supplied scope as identity.
 
 
 ## Durable authorization boundary
