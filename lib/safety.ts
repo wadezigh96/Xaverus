@@ -20,7 +20,7 @@ export function getServerPolicy():SafetyPolicy{
       enabled:p.enabled??DEFAULT_POLICY.enabled,
       asset:typeof p.asset==="string"?p.asset:DEFAULT_POLICY.asset,
       network:typeof p.network==="string"?p.network:DEFAULT_POLICY.network,
-      recipientAllowlist:Array.isArray(p.recipientAllowlist)?p.recipientAllowlist.map(String).map(v=>v.trim()).filter(Boolean):[]
+       recipientAllowlist:Array.isArray(p.recipientAllowlist)?p.recipientAllowlist.map(String).map(v=>v.trim()).filter(Boolean):csv(process.env.XAVERUS_RECIPIENT_ALLOWLIST)
     };
   }catch{}}
   return {
