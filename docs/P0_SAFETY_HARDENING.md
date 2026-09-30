@@ -14,3 +14,17 @@ Changes:
 
 Production gate:
 XAVERUS_SPENT_TODAY is temporary server configuration, not a durable ledger. Before autonomous execution, replace it with a persistent per-passport spend ledger and make approval state server-authoritative.
+
+
+## Durable authorization boundary
+
+`POST /api/agent/authorize` is the server-side authorization boundary. It requires `XAVERUS_APPROVAL_SECRET`, reloads the server policy, reads today's durable spend from Upstash Redis, re-evaluates the intent, and atomically reserves the amount with a request-ID idempotency record.
+
+The ledger uses micro-USDC integer units and a Redis server-side script so concurrent requests cannot both consume the same remaining daily budget. Authorization still does not sign or broadcast funds.
+
+Required server-only variables:
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+- `XAVERUS_APPROVAL_SECRET`
+
+If Redis or the approval secret is missing, authorization fails closed with HTTP 503. `XAVERUS_SPENT_TODAY` remains only for the decision-only preview compatibility path and is not used for authorization.
