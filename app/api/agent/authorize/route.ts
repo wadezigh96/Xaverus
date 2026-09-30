@@ -1,6 +1,6 @@
 import {NextResponse} from "next/server";
 import {createHash} from "node:crypto";
-import {buildOnchainAuthorization,readOnchainPolicy} from "../../../../lib/onchain-passport";
+import {buildOnchainAuthorization,readOnchainPolicy,readRecipientAllowed} from "../../../../lib/onchain-passport";
 
 export const dynamic="force-dynamic";
 
