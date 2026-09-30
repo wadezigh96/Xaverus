@@ -42,7 +42,8 @@ Xaverus turns agent payment intent into a policy decision before execution.
 - 📋 **Activity trail** — records policy decisions and safety actions.
 - 🤖 **OKX AI / A2MCP** — exposes Xaverus Safety Check as a machine-readable policy service.
 - 💸 **x402 readiness** — includes a server-side x402 seller flow for machine-to-machine paid resources.
-- 🧱 **Server-side policy enforcement** — the browser is treated as an untrusted UI.
+- ⛓️ **On-chain Safety Passport** — policy, daily spend, kill switch, authorization and activity are anchored on X Layer.
+- 🧱 **Server-side decision layer** — the browser is treated as an untrusted UI; the wallet remains the signing boundary.
 
 ---
 
@@ -93,7 +94,7 @@ flowchart TB
     X --> SV[Services / Agents]
     SV -.-> X4[x402 Resources]
 
-    P --> ACT[Activity / Proof of Action]
+    P --> OC[X Layer Safety Passport Contract]\n    OC --> ACT[On-chain Activity]\n    OC --> W
 ```
 
 ### Security boundary
@@ -195,7 +196,7 @@ The marketplace UI includes:
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/api/agent/safety-check` | Server-side safety policy decision |
+| POST | `/api/agent/safety-check` | On-chain Safety Passport decision |\n| GET | `/api/agent/passport` | On-chain passport state |\n| POST | `/api/agent/authorize` | Build wallet authorization transaction |
 | GET | `/api/agent/manifest` | A2MCP service manifest |
 | GET | `/api/x402/service` | x402-protected service |
 | GET | `/api/launch-pass` | Launch Pass status / configuration boundary |
