@@ -6,8 +6,10 @@ const seen=new Map<string,number>();
 const REPLAY_TTL_MS=10*60*1000;
 function cleanup(now:number){for(const [key,expires] of seen)if(expires<=now)seen.delete(key);}
 export async function POST(request:Request){
+ let body:Record<string,unknown>;
+ try{body=await request.json();}
+ catch{return NextResponse.json({ok:false,error:"Invalid JSON."},{status:400});}
  try{
-  const body=await request.json();
   const amount=Number(body.amount);
   const spentToday=await getSpentToday();
   const asset=String(body.asset??"USDC");
@@ -24,5 +26,5 @@ export async function POST(request:Request){
   return NextResponse.json({ok:true,service:"Xaverus Safety Passport",requestId,intentHash,decision,
     intent:{amount,asset,network,recipient:recipient??null,approvalRequired:policy.approvalRequired},
     safety:{policyEvaluatedServerSide:true,clientPolicyAccepted:false,spentTodaySource:"upstash-durable-ledger",replayGuard:"process-local-10m",executionPerformed:false,mode:"decision-only"}});
- }catch{return NextResponse.json({ok:false,error:"Invalid JSON."},{status:400});}
+ }catch(error){return NextResponse.json({ok:false,error:error instanceof Error?error.message:"Safety ledger unavailable."},{status:503});}
 }
