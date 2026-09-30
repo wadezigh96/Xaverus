@@ -12,7 +12,8 @@ export async function POST(request:Request){
     if(request.headers.get("x-xaverus-approval")!==approvalSecret)
       return NextResponse.json({ok:false,error:"Server approval rejected."},{status:403});
 
-    const body=await request.json();
+    let body:Record<string,unknown>;
+    try{body=await request.json();}catch{return NextResponse.json({ok:false,error:"Invalid JSON."},{status:400});}
     const amount=Number(body.amount);
     const asset=String(body.asset??"");
     const network=String(body.network??"");
