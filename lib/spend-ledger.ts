@@ -16,6 +16,8 @@ end
 redis.call("INCRBY",KEYS[1],amount)
 redis.call("EXPIRE",KEYS[1],172800)
 redis.call("SET",KEYS[2],ARGV[3],"EX",86400)
+redis.call("LPUSH",KEYS[3],ARGV[4])
+redis.call("LTRIM",KEYS[3],0,99)
 return {1,tostring(current+amount),ARGV[3]}
 `;
 
@@ -42,15 +44,24 @@ export async function getSpentToday(now=new Date()){
   const value=await command(["GET",`xaverus:spend:${dayKey(now)}`]);
   return Number(value??0)/1_000_000;
 }
-export async function reserveSpend(args:{requestId:string;intentHash:string;amount:number;daily:number;now?:Date}):Promise<LedgerResult>{
+export async function reserveSpend(args:{requestId:string;intentHash:string;amount:number;daily:number;activity?:Record<string,unknown>;now?:Date}):Promise<LedgerResult>{
   const now=args.now??new Date();
   const spendKey=`xaverus:spend:${dayKey(now)}`;
+  const activityKey="xaverus:activity";
   const idKey=`xaverus:idempotency:${createHash("sha256").update(args.requestId).digest("hex")}`;
   const record=JSON.stringify({requestId:args.requestId,intentHash:args.intentHash,amount:args.amount,at:now.toISOString()});
-  const result=await command(["EVAL",SCRIPT,"2",spendKey,idKey,String(micros(args.amount)),String(micros(args.daily)),record]) as unknown;
+  const activity=JSON.stringify(args.activity??{type:"authorization.reserved",requestId:args.requestId,intentHash:args.intentHash,amount:args.amount,at:now.toISOString()});
+  const result=await command(["EVAL",SCRIPT,"3",spendKey,idKey,activityKey,String(micros(args.amount)),String(micros(args.daily)),record,activity]) as unknown;
   if(!Array.isArray(result)||result.length<2)throw new Error("Invalid ledger response.");
   const code=Number(result[0]); const spent=Number(result[1])/1_000_000;
   if(code===2)return {status:"replayed",spentToday:spent,record:String(result[2]??"")};
   if(code===0)return {status:"blocked",spentToday:spent};
   return {status:"reserved",spentToday:spent,record:String(result[2]??"")};
+}
+
+export async function getActivity(limit=50){
+  const n=Math.max(1,Math.min(100,Math.floor(limit)));
+  const value=await command(["LRANGE","xaverus:activity","0",String(n-1)]);
+  if(!Array.isArray(value))return [];
+  return value.map((item)=>{try{return JSON.parse(String(item));}catch{return {type:"invalid.activity.record"};}});
 }
