@@ -3,7 +3,7 @@ import {randomBytes,createHmac} from "node:crypto";
 
 export const dynamic="force-dynamic";
 
-const NETWORK=process.env.XAVERUS_LAUNCH_PASS_NETWORK||"eip155:1952";
+const NETWORK=process.env.XAVERUS_LAUNCH_PASS_NETWORK||"eip155:196";
 const PRICE=process.env.XAVERUS_LAUNCH_PASS_PRICE||"$2";
 
 function issueCredential(){
