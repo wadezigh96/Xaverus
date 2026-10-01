@@ -5,6 +5,7 @@ import {
   http,
   keccak256,
   parseAbi,
+  parseAbiItem,
   parseUnits,
   toBytes,
   type Address,
@@ -13,6 +14,8 @@ import {
 
 export const XLAYER_CHAIN_ID = 196;
 export const XLAYER_RPC = process.env.XAVERUS_RPC_URL || "https://rpc.xlayer.tech";
+/** Circle native USDC on X Layer mainnet */
+export const XLAYER_NATIVE_USDC = "0xB6CEceAB302E2E4948951eE7843FC24e92933061" as Address;
 
 export const XAVERUS_PASSPORT_ABI = parseAbi([
   "function owner() view returns (address)",
@@ -23,10 +26,24 @@ export const XAVERUS_PASSPORT_ABI = parseAbi([
   "function allowlistEnabled() view returns (bool)",
   "function spentToday() view returns (uint256)",
   "function remainingToday() view returns (uint256)",
+  "function currentDay() view returns (uint256)",
+  "function isAuthorized(bytes32 requestId) view returns (bool)",
   "function recipientAllowed(address) view returns (bool)",
   "function authorize(bytes32 requestId,uint256 amount,address token,address recipient)",
+  "function killSwitch()",
+  "function setPolicy(uint256 perTxLimit_,uint256 dailyLimit_,bool enabled_)",
+  "function setRecipient(address recipient,bool allowed)",
+  "function setAllowlistEnabled(bool enabled_)",
   "event AuthorizationRecorded(bytes32 indexed requestId,address indexed owner,address indexed recipient,uint256 amount,uint256 day,uint256 spentToday)",
+  "event PolicyUpdated(uint256 perTxLimit,uint256 dailyLimit,bool enabled)",
+  "event RecipientUpdated(address indexed recipient,bool allowed)",
+  "event AllowlistToggled(bool enabled)",
+  "event OwnershipTransferred(address indexed previousOwner,address indexed newOwner)",
 ]);
+
+const AUTHORIZATION_EVENT = parseAbiItem(
+  "event AuthorizationRecorded(bytes32 indexed requestId,address indexed owner,address indexed recipient,uint256 amount,uint256 day,uint256 spentToday)"
+);
 
 function addressFromEnv() {
   const value = process.env.XAVERUS_PASSPORT_CONTRACT;
@@ -87,12 +104,14 @@ export async function readOnchainPolicy(): Promise<OnchainPolicy> {
 export async function readRecipientAllowed(recipient: string) {
   const address = addressFromEnv();
   const c = client();
-  return Boolean(await c.readContract({
-    address,
-    abi: XAVERUS_PASSPORT_ABI,
-    functionName: "recipientAllowed",
-    args: [getAddress(recipient)],
-  }));
+  return Boolean(
+    await c.readContract({
+      address,
+      abi: XAVERUS_PASSPORT_ABI,
+      functionName: "recipientAllowed",
+      args: [getAddress(recipient)],
+    })
+  );
 }
 
 export async function buildOnchainAuthorization(args: {
@@ -133,19 +152,22 @@ export async function readAuthorizationLogs(limit = 50) {
   const deploymentBlock = process.env.XAVERUS_PASSPORT_DEPLOYMENT_BLOCK;
   const logs = await c.getLogs({
     address,
-    event: XAVERUS_PASSPORT_ABI[10],
+    event: AUTHORIZATION_EVENT,
     fromBlock: deploymentBlock ? BigInt(deploymentBlock) : 0n,
     toBlock: "latest",
   });
-  return logs.slice(-Math.max(1, Math.min(100, Math.floor(limit)))).reverse().map((log) => ({
-    type: "authorization.onchain",
-    requestId: log.args.requestId,
-    owner: log.args.owner,
-    recipient: log.args.recipient,
-    amount: Number(log.args.amount ?? 0n) / 1_000_000,
-    day: Number(log.args.day ?? 0n),
-    spentToday: Number(log.args.spentToday ?? 0n) / 1_000_000,
-    blockNumber: log.blockNumber?.toString() ?? null,
-    transactionHash: log.transactionHash ?? null,
-  }));
+  return logs
+    .slice(-Math.max(1, Math.min(100, Math.floor(limit))))
+    .reverse()
+    .map((log) => ({
+      type: "authorization.onchain",
+      requestId: log.args.requestId,
+      owner: log.args.owner,
+      recipient: log.args.recipient,
+      amount: Number(log.args.amount ?? 0n) / 1_000_000,
+      day: Number(log.args.day ?? 0n),
+      spentToday: Number(log.args.spentToday ?? 0n) / 1_000_000,
+      blockNumber: log.blockNumber?.toString() ?? null,
+      transactionHash: log.transactionHash ?? null,
+    }));
 }
