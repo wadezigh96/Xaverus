@@ -74,7 +74,7 @@ The safety layer is defense-in-depth and does not claim perfect security.
 4. Exceed the per-transaction limit and show BLOCK.
 5. Trigger the kill switch and show BLOCK.
 6. Show the OKX AI A2MCP service identity.
-7. Show the x402 payment flow as a separate service/payment demonstration.
+7. Show the x402 payment challenge/protected-resource flow as a separate service demonstration. Do not describe it as a settled production payment unless a corresponding transaction hash is available.
 8. Explain that the safety service is decision-only and does not directly sign transactions.
 
 ## Marketplace MVP
