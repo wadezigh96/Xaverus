@@ -175,7 +175,7 @@ export async function readAuthorizationLogs(limit = 50) {
   // X Layer RPC limits eth_getLogs ranges to 100 blocks. Walk backward in
   // bounded chunks so the activity view works on mainnet without changing
   // the Passport contract or issuing any transaction.
-  const logs: typeof AUTHORIZATION_EVENT extends infer _ ? any[] : never = [];
+  const logs = [] as Awaited<ReturnType<typeof c.getLogs>>;
   let cursor = latestBlock;
 
   while (cursor >= startBlock && logs.length < requested) {
