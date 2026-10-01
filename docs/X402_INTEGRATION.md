@@ -21,9 +21,9 @@ Set these in Vercel Environment Variables, never in browser code, GitHub, screen
 - XAVERUS_X402_PRICE (default $0.01)
 - XAVERUS_X402_ENABLED=true
 
-The endpoint stays disabled until all required values exist. Do not switch it on before validating with X Layer testnet.
+The production seller is configured for **X Layer mainnet (eip155:196)**. The current evidence covers the HTTP 402/protected-resource layer and the included buyer probe. A completed payment/settlement claim should only be made when the corresponding transaction hash has been captured.
 
-OKX documents X Layer testnet as eip155:1952; mainnet is eip155:196. Testnet is the recommended first validation path because it avoids real funds.
+For safe validation without real funds, the same implementation supports X Layer testnet eip155:1952 when selected through the server-side network setting.
 
 ## Safety boundary
 
