@@ -153,9 +153,9 @@ Xaverus includes an OKX x402 seller service:
 https://xaverus.vercel.app/api/x402/service
 ```
 
-The production seller is configured for **X Layer mainnet (eip155:196)** and uses server-only configuration. The endpoint has been validated at the HTTP 402/protected-resource layer with the included buyer probe. This documentation does **not** claim a settled production payment transaction; a settlement claim should include the corresponding transaction hash.
+The production seller is configured for **X Layer mainnet (eip155:196)** and uses server-only configuration. A real **$0.01 USD₮0** buyer payment has now been verified on X Layer mainnet with a successful on-chain receipt.
 
-See [docs/X402_INTEGRATION.md](docs/X402_INTEGRATION.md).
+See [docs/X402_INTEGRATION.md](docs/X402_INTEGRATION.md) and the [verified mainnet payment evidence](docs/X402_MAINNET_PAYMENT_EVIDENCE.md).
 
 ---
 
@@ -257,6 +257,7 @@ Xaverus was extended during the official OKX Dev Day build period with meaningfu
 - Server-side safety policy endpoint
 - x402 seller integration
 - x402 buyer E2E probe
+- verified X Layer mainnet x402 settlement evidence
 - configurable x402 network support
 - production diagnostics
 - marketplace and Safety Passport UI
