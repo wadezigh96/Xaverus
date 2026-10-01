@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {createHash} from "node:crypto";
-import {buildOnchainAuthorization,readOnchainPolicy,readRecipientAllowed} from "../../../../lib/onchain-passport";
+import {isAddress} from "viem";
+import {buildOnchainAuthorization,readOnchainPolicy,readRecipientAllowed,readAuthorizationStatus} from "../../../../lib/onchain-passport";
 
 export const dynamic="force-dynamic";
 
@@ -20,11 +21,23 @@ export async function POST(request:Request){
       return NextResponse.json({ok:false,error:"A unique X-Xaverus-Request-ID is required."},{status:400});
     if(asset!=="USDC"||network!=="X Layer")
       return NextResponse.json({ok:false,error:"Only USDC on X Layer is supported by this Passport."},{status:400});
-    if(!Number.isFinite(amount)||amount<=0||!recipient||!walletAddress)
-      return NextResponse.json({ok:false,error:"Amount, recipient, and walletAddress are required."},{status:400});
+    if(!Number.isFinite(amount)||amount<=0)
+      return NextResponse.json({ok:false,error:"Invalid amount."},{status:400});
+    if(!isAddress(recipient))
+      return NextResponse.json({ok:false,error:"A valid EVM recipient address is required."},{status:400});
+    if(!isAddress(walletAddress))
+      return NextResponse.json({ok:false,error:"A valid EVM wallet address is required."},{status:400});
 
     const policy=await readOnchainPolicy();
     const intentHash=createHash("sha256").update(JSON.stringify({requestId,amount,asset,network,recipient,walletAddress})).digest("hex");
+
+    if(await readAuthorizationStatus(requestId))
+      return NextResponse.json({
+        ok:false,
+        error:"This X-Xaverus-Request-ID has already been authorized on-chain.",
+        intentHash,
+        replay:true,
+      },{status:409});
     if(!policy.enabled)
       return NextResponse.json({ok:false,error:"On-chain Safety Passport is stopped."},{status:409});
     if(amount>policy.perTx)

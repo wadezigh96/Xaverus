@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {createHash} from "node:crypto";
+import {isAddress} from "viem";
 import {readOnchainPolicy,readRecipientAllowed} from "../../../../lib/onchain-passport";
 
 export const dynamic="force-dynamic";
@@ -19,6 +20,8 @@ export async function POST(request:Request){
       return NextResponse.json({ok:false,error:"A unique X-Xaverus-Request-ID is required."},{status:400});
     if(!Number.isFinite(amount)||amount<=0)
       return NextResponse.json({ok:false,error:"Invalid amount."},{status:400});
+    if(!recipient||!isAddress(recipient))
+      return NextResponse.json({ok:false,error:"A valid EVM recipient address is required."},{status:400});
 
     const policy=await readOnchainPolicy();
     const intentHash=createHash("sha256").update(JSON.stringify({requestId,amount,asset,network,recipient})).digest("hex");

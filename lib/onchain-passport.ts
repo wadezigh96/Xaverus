@@ -102,6 +102,21 @@ export async function readOnchainPolicy(): Promise<OnchainPolicy> {
   };
 }
 
+export async function readAuthorizationStatus(requestId: string) {
+  const address = addressFromEnv();
+  const c = client();
+  const requestHash = keccak256(toBytes(requestId));
+
+  return Boolean(
+    await c.readContract({
+      address,
+      abi: XAVERUS_PASSPORT_ABI,
+      functionName: "isAuthorized",
+      args: [requestHash],
+    })
+  );
+}
+
 export async function readRecipientAllowed(recipient: string) {
   const address = addressFromEnv();
   const c = client();
