@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "x402:e2e": "node scripts/x402-e2e-test.mjs",
-    "test:safety": "node --test lib/safety.test.ts"
+    "test:safety": "node --test lib/safety.test.ts",
+    "passport:deploy": "node scripts/deploy-passport.mjs",
+    "passport:help": "node scripts/deploy-passport.mjs"
   },
   "dependencies": {
     "next": "^16.0.10",
