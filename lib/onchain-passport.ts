@@ -165,15 +165,34 @@ export async function buildOnchainAuthorization(args: {
 export async function readAuthorizationLogs(limit = 50) {
   const address = addressFromEnv();
   const c = client();
+  const requested = Math.max(1, Math.min(100, Math.floor(limit)));
   const deploymentBlock = process.env.XAVERUS_PASSPORT_DEPLOYMENT_BLOCK;
-  const logs = await c.getLogs({
-    address,
-    event: AUTHORIZATION_EVENT,
-    fromBlock: deploymentBlock ? BigInt(deploymentBlock) : 0n,
-    toBlock: "latest",
-  });
+  const startBlock = deploymentBlock ? BigInt(deploymentBlock) : 0n;
+  const latestBlock = await c.getBlockNumber();
+
+  if (latestBlock < startBlock) return [];
+
+  // X Layer RPC limits eth_getLogs ranges to 100 blocks. Walk backward in
+  // bounded chunks so the activity view works on mainnet without changing
+  // the Passport contract or issuing any transaction.
+  const logs: typeof AUTHORIZATION_EVENT extends infer _ ? any[] : never = [];
+  let cursor = latestBlock;
+
+  while (cursor >= startBlock && logs.length < requested) {
+    const fromBlock = cursor - 99n > startBlock ? cursor - 99n : startBlock;
+    const batch = await c.getLogs({
+      address,
+      event: AUTHORIZATION_EVENT,
+      fromBlock,
+      toBlock: cursor,
+    });
+    logs.unshift(...batch);
+    if (fromBlock === startBlock) break;
+    cursor = fromBlock - 1n;
+  }
+
   return logs
-    .slice(-Math.max(1, Math.min(100, Math.floor(limit))))
+    .slice(-requested)
     .reverse()
     .map((log) => ({
       type: "authorization.onchain",
