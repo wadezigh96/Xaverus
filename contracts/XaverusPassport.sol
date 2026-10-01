@@ -12,7 +12,7 @@ contract XaverusPassport {
     /// @notice Target chain ID (X Layer mainnet).
     uint256 public constant CHAIN_ID = 196;
     /// @notice Circle native USDC on X Layer mainnet.
-    address public constant NATIVE_USDC = 0xB6CEceAB302E2E4948951eE7843FC24e92933061;
+    address public constant NATIVE_USDC = 0xB6CEceAB302E2E4948951eE7843FC24E92933061;
 
     address public owner;
     address public immutable asset;
