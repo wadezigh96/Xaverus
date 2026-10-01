@@ -15,7 +15,9 @@ import {
 export const XLAYER_CHAIN_ID = 196;
 export const XLAYER_RPC = process.env.XAVERUS_RPC_URL || "https://rpc.xlayer.tech";
 /** Circle native USDC on X Layer mainnet */
-export const XLAYER_NATIVE_USDC = "0xB6CEceAB302E2E4948951eE7843FC24e92933061" as Address;
+export const XLAYER_NATIVE_USDC = "0xB6CEceAB302E2E4948951eE7843FC24E92933061" as Address;
+/** Live XaverusPassport on X Layer mainnet */
+export const DEFAULT_PASSPORT_CONTRACT = "0xeB999d9abE4577987fb393a4BAb5B61531D038e4" as Address;
 
 export const XAVERUS_PASSPORT_ABI = parseAbi([
   "function owner() view returns (address)",
@@ -46,8 +48,7 @@ const AUTHORIZATION_EVENT = parseAbiItem(
 );
 
 function addressFromEnv() {
-  const value = process.env.XAVERUS_PASSPORT_CONTRACT;
-  if (!value) throw new Error("XAVERUS_PASSPORT_CONTRACT is not configured.");
+  const value = process.env.XAVERUS_PASSPORT_CONTRACT || DEFAULT_PASSPORT_CONTRACT;
   return getAddress(value) as Address;
 }
 
