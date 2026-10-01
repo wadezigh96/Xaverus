@@ -153,7 +153,7 @@ Xaverus includes an OKX x402 seller service:
 https://xaverus.vercel.app/api/x402/service
 ```
 
-The seller uses server-only configuration and was validated through an Agentic Wallet payment flow on **X Layer Testnet**.
+The production seller is configured for **X Layer mainnet (eip155:196)** and uses server-only configuration. The endpoint has been validated at the HTTP 402/protected-resource layer with the included buyer probe. This documentation does **not** claim a settled production payment transaction; a settlement claim should include the corresponding transaction hash.
 
 See [docs/X402_INTEGRATION.md](docs/X402_INTEGRATION.md).
 
