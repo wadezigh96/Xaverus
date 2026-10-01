@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
+// LEGACY — not used by the Xaverus app. Deploy XaverusPassport.sol instead.
 pragma solidity ^0.8.24;
 
-/// @title Xaverus Safety Passport
-/// @notice Minimal on-chain policy/authorization registry for X Layer mainnet (chainId 196).
+/// @title Xaverus Safety Passport (legacy multi-passport sketch)
+/// @notice Not wired to the production client. Prefer XaverusPassport.sol.
 /// @dev This contract never holds or moves user funds. The owner wallet remains the execution boundary.
 contract XaverusSafetyPassport {
     uint256 public constant CHAIN_ID = 196;
