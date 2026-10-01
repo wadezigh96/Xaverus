@@ -1,5 +1,6 @@
 import {
   createPublicClient,
+  decodeEventLog,
   encodeFunctionData,
   getAddress,
   http,
@@ -194,15 +195,23 @@ export async function readAuthorizationLogs(limit = 50) {
   return logs
     .slice(-requested)
     .reverse()
-    .map((log) => ({
-      type: "authorization.onchain",
-      requestId: log.args.requestId,
-      owner: log.args.owner,
-      recipient: log.args.recipient,
-      amount: Number(log.args.amount ?? 0n) / 1_000_000,
-      day: Number(log.args.day ?? 0n),
-      spentToday: Number(log.args.spentToday ?? 0n) / 1_000_000,
-      blockNumber: log.blockNumber?.toString() ?? null,
-      transactionHash: log.transactionHash ?? null,
-    }));
+    .map((log) => {
+      const decoded = decodeEventLog({
+        abi: [AUTHORIZATION_EVENT],
+        data: log.data,
+        topics: log.topics,
+      });
+
+      return {
+        type: "authorization.onchain",
+        requestId: decoded.args.requestId,
+        owner: decoded.args.owner,
+        recipient: decoded.args.recipient,
+        amount: Number(decoded.args.amount ?? 0n) / 1_000_000,
+        day: Number(decoded.args.day ?? 0n),
+        spentToday: Number(decoded.args.spentToday ?? 0n) / 1_000_000,
+        blockNumber: log.blockNumber?.toString() ?? null,
+        transactionHash: log.transactionHash ?? null,
+      };
+    });
 }
