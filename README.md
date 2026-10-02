@@ -81,20 +81,21 @@ The policy service is decision-only. It does **not** sign or move funds.
 
 ```mermaid
 flowchart TB
-    U[User] --> P[Xaverus Safety Passport]
+    subgraph Runtime["Xaverus Runtime"]
+        U[User] --> P[Xaverus Safety Passport]
+        P -->|policy check| S[Xaverus Safety Check]
+        S -->|allowed| A[Autonomous Agent]
+        S -->|blocked| R[Reject + Explain]
+        A --> G[Explicit Approval]
+        G --> W[OKX Agentic Wallet / Execution Boundary]
+        W --> X[X Layer]
+        X --> SV[Services / Agents]
+    end
 
-    P -->|policy check| S[Xaverus Safety Check]
-    S -->|allowed| A[Autonomous Agent]
-    S -->|blocked| R[Reject + Explain]
-
-    A --> G[Explicit Approval]
-    G --> W[OKX Agentic Wallet / Execution Boundary]
-    W --> X[X Layer]
-
-    X --> SV[Services / Agents]
-    SV -.-> X4[x402 Resources]
-
-    P --> OC[X Layer Safety Passport Contract]\n    OC --> ACT[On-chain Activity]\n    OC --> W
+    P --> OC[X Layer Safety Passport Contract]
+    OC --> ACT[On-chain Activity]
+    OC --> W
+    SV -.->|HTTP 402| X4[x402 Resources]
 ```
 
 ### Security boundary
@@ -196,7 +197,9 @@ The marketplace UI includes:
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/api/agent/safety-check` | On-chain Safety Passport decision |\n| GET | `/api/agent/passport` | On-chain passport state |\n| POST | `/api/agent/authorize` | Build wallet authorization transaction |
+| POST | `/api/agent/safety-check` | On-chain Safety Passport decision |
+| GET | `/api/agent/passport` | On-chain passport state |
+| POST | `/api/agent/authorize` | Build wallet authorization transaction |
 | GET | `/api/agent/manifest` | A2MCP service manifest |
 | GET | `/api/x402/service` | x402-protected service |
 | GET | `/api/launch-pass` | Launch Pass status / configuration boundary |
