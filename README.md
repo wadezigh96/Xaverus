@@ -258,7 +258,7 @@ Xaverus was extended during the official OKX Dev Day build period with meaningfu
 - x402 seller integration
 - x402 buyer E2E probe
 - verified X Layer mainnet x402 settlement evidence
-- configurable x402 network support
+- X Layer mainnet-only x402 seller configuration
 - production diagnostics
 - marketplace and Safety Passport UI
 - build-period documentation and evidence

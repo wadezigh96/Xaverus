@@ -7,13 +7,17 @@ Xaverus exposes a free A2MCP-compatible safety service:
 
 The service accepts an agent payment intent and returns a deterministic policy decision. It intentionally does not move funds. OKX's A2MCP documentation supports free endpoints and x402 pay-per-call endpoints.
 
-## Next production payment layer
-Use the official OKX Payment SDK for a paid version rather than implementing x402 settlement manually. The Node.js stack documented by OKX uses @okxweb3/x402-express, @okxweb3/x402-core and @okxweb3/x402-evm, with server-side API credentials.
+## Current production x402 layer
+Xaverus has a production x402 seller configured for X Layer mainnet (`eip155:196`) at $0.01 per paid service request. Mainnet settlement has been independently verified on-chain.
 
-For an Agent-to-MCP service, OKX supports a pay-per-call x402 endpoint that returns HTTP 402 until payment is completed, then the request is replayed.
+The x402 payment layer is separate from transaction execution. A successful x402 payment does not cause Xaverus to sign or broadcast a user transaction.
 
-## Agentic Wallet
-Live execution should use the official OKX Agentic Wallet / Onchain OS security boundary. Never put API keys, passphrases, private keys or seed phrases in browser code or GitHub.
+The production x402 configuration is intentionally mainnet-only. No non-production network is part of the production submission path.
+
+## Agentic Wallet / execution boundary
+Xaverus production execution is currently disabled. Xaverus does not hold user private keys and does not sign or broadcast transactions.
+
+If a future integration uses the official OKX Agentic Wallet / Onchain OS security boundary, signing must remain inside the selected wallet/security environment. Never put API keys, passphrases, private keys or seed phrases in browser code or GitHub.
 
 ## Registration checklist
 1. Deploy Xaverus to a public HTTPS domain.
@@ -22,4 +26,4 @@ Live execution should use the official OKX Agentic Wallet / Onchain OS security 
 4. Register Xaverus as an A2MCP ASP using the official OKX.AI flow.
 5. Submit the endpoint for review/listing.
 6. Test an OKX AI agent calling the safety service.
-7. Only then enable paid x402 execution with server-side OKX credentials.
+7. Any future execution integration must be separately enabled and independently verified; the current production service remains decision-only with an external wallet execution boundary.
