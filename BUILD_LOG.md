@@ -18,7 +18,7 @@ Added a guarded seller-side x402 endpoint using OKX's x402 packages.
 Evidence:
 - `/api/x402/service`
 - server-only OKX credentials
-- configurable X Layer network
+- X Layer mainnet-only production configuration (`eip155:196`)
 - HTTP 402 payment challenge
 - buyer-side E2E probe
 
@@ -74,7 +74,7 @@ The safety layer is defense-in-depth and does not claim perfect security.
 4. Exceed the per-transaction limit and show BLOCK.
 5. Trigger the kill switch and show BLOCK.
 6. Show the OKX AI A2MCP service identity.
-7. Show the x402 payment challenge/protected-resource flow as a separate service demonstration. Do not describe it as a settled production payment unless a corresponding transaction hash is available.
+7. Show the x402 payment challenge/protected-resource flow as a separate service demonstration. Production x402 settlement may be described as verified only where the corresponding mainnet transaction evidence is included.
 8. Explain that the safety service is decision-only and does not directly sign transactions.
 
 ## Marketplace MVP
