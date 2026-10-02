@@ -1,2 +1,15 @@
-import {NextResponse} from "next/server";
-export async function GET(){return NextResponse.json({service:"xaverus",mode:process.env.XAVERUS_MODE||"demo-safe",ok:true,features:["safety-policy","approval-gate","kill-switch","proof-of-action"]})}
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  return NextResponse.json({
+    service: "xaverus",
+    mode: process.env.XAVERUS_MODE || "production-safe",
+    ok: true,
+    features: [
+      "safety-policy",
+      "approval-gate",
+      "kill-switch",
+      "proof-of-action",
+    ],
+  });
+}

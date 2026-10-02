@@ -26,7 +26,7 @@ export default function Safety(){
     <p>Per transaction: <b>{p?.perTx??"—"} {p?.asset||""}</b></p><p>Daily limit: <b>{p?.daily??"—"} {p?.asset||""}</b></p><p>Approval required: <b>{p?p.approvalRequired?"YES":"NO":"—"}</b></p><p>Network: <b>{p?.network||"—"}</b></p><p>Recipient allowlist: <b>{p?p.recipientAllowlistConfigured?"CONFIGURED":"OPEN":"—"}</b></p><p className="category">Policy values are not editable from this untrusted browser.</p></div>
    <div className="agentCard"><span className="category">INTENT PREVIEW</span><h3>{result?result.allowed?"ALLOWED":"BLOCKED":"READY"}</h3><p>{result?.reason||"Submit an intent for a server-side decision."}</p>
     <label>Amount<input className="search" inputMode="decimal" value={a} onChange={e=>setA(e.target.value)}/></label>
-    <label>Recipient (optional)<input className="search" placeholder="0x..." value={recipient} onChange={e=>setRecipient(e.target.value)}/></label>
+    <label>Recipient<input className="search" placeholder="0x..." value={recipient} onChange={e=>setRecipient(e.target.value)} required/></label>
     <button className="primary" onClick={check} disabled={loading||!p}>{loading?"Checking…":"Run server policy check"}</button>
    </div>
   </section>
