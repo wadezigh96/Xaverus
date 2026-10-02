@@ -6,15 +6,15 @@ import {withX402} from "@okxweb3/x402-next";
 
 export const dynamic="force-dynamic";
 
+// Production submission is intentionally mainnet-only.
 const MAINNET="eip155:196";
-const TESTNET="eip155:1952";
 const NETWORK=process.env.XAVERUS_X402_NETWORK||MAINNET;
 
-if(NETWORK!==MAINNET&&NETWORK!==TESTNET){
-  throw new Error("XAVERUS_X402_NETWORK must be eip155:196 (mainnet) or eip155:1952 (testnet).");
+if(NETWORK!==MAINNET){
+  throw new Error("Xaverus production x402 service requires X Layer mainnet (eip155:196).");
 }
 
-const networkLabel=NETWORK===TESTNET?"X Layer Testnet":"X Layer";
+const networkLabel="X Layer";
 
 const handler=async()=>NextResponse.json({
   ok:true,
