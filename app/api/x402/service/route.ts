@@ -8,7 +8,7 @@ export const dynamic="force-dynamic";
 
 // Production submission is intentionally mainnet-only.
 const MAINNET="eip155:196";
-const NETWORK=process.env.XAVERUS_X402_NETWORK||MAINNET;
+const NETWORK=MAINNET;
 
 if(NETWORK!==MAINNET){
   throw new Error("Xaverus production x402 service requires X Layer mainnet (eip155:196).");

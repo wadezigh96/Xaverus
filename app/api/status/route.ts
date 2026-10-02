@@ -16,7 +16,7 @@ function x402Config(){
     enabled,
     configured,
     ready:enabled&&configured,
-    network:process.env.XAVERUS_X402_NETWORK||"eip155:196",
+    network:"eip155:196",
     price:process.env.XAVERUS_X402_PRICE||"$0.01",
     required,
   };

@@ -20,7 +20,6 @@ Set these in Vercel Environment Variables, never in browser code, GitHub, screen
 - `XAVERUS_PAY_TO_ADDRESS`
 - `XAVERUS_X402_PRICE` (default `$0.01`)
 - `XAVERUS_X402_ENABLED=true`
-- `XAVERUS_X402_NETWORK=eip155:196`
 
 The production seller is configured for **X Layer mainnet (eip155:196)**. A real **$0.01 USD₮0** payment has been verified on-chain; see `docs/X402_MAINNET_PAYMENT_EVIDENCE.md` for the transaction receipt evidence.
 
