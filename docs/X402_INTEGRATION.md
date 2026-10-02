@@ -25,7 +25,7 @@ The production seller is configured for **X Layer mainnet (eip155:196)**. A real
 
 ## Mainnet boundary
 
-The production x402 route is intentionally locked to **X Layer mainnet (`eip155:196`)**. Testnet is not part of the production submission path.
+The production x402 route is intentionally locked to **X Layer mainnet (`eip155:196`)**. No non-production network is part of the production submission path.
 
 ## Safety boundary
 
