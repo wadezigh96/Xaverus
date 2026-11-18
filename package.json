@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "node --test lib/*.test.ts",
+    "test:routes": "node scripts/mint-routes-e2e.mjs",
     "x402:e2e": "node scripts/x402-e2e-test.mjs",
     "test:safety": "node --test lib/safety.test.ts",
     "passport:deploy": "node scripts/deploy-passport.mjs",

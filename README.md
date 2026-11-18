@@ -44,6 +44,8 @@ Xaverus turns agent payment intent into a policy decision before execution.
 - 💸 **x402 readiness** — includes a server-side x402 seller flow for machine-to-machine paid resources.
 - ⛓️ **On-chain Safety Passport** — policy, daily spend, kill switch, authorization and activity are anchored on X Layer.
 - 🧱 **Server-side decision layer** — the browser is treated as an untrusted UI; the wallet remains the signing boundary.
+- 🪪 **Human-proof minting** — a Safety Passport is minted only with a Human Proof: an X account verified through X OAuth plus a wallet-signed OKX UID claim (the UID is a user-signed claim, never a verification by OKX).
+- 🔌 **TapeOut integration** — the mint rule is enforced openly by a small NAND policy circuit evaluated read-only through `eval()`, and each Human Proof is anchored as a hash file in the circuit's container.
 
 ---
 
@@ -160,6 +162,35 @@ See [docs/X402_INTEGRATION.md](docs/X402_INTEGRATION.md) and the [verified mainn
 
 ---
 
+## Human-proof minting (Build X Series)
+
+New in the OKX X Layer Build X Series: before a wallet can mint a Safety
+Passport, it must present a **Human Proof** — an X Binding (X.com account
+verified through X OAuth, tied to the wallet by signature) plus an OKX
+UID Claim (the user's OKX UID, declared by the user and bound to the
+wallet by signature). The Mint Gate refuses any mint without a valid
+Human Proof. Minting deploys a new Safety Passport contract owned by the
+wallet; it is not a token mint.
+
+The OKX UID is always a **user-signed claim, never a verification by
+OKX**, and no passwords are ever requested or stored. The mint rule is
+enforced openly by a small TapeOut NAND policy circuit evaluated
+read-only through `eval()`, and each proof is anchored as a hash file in
+the circuit's container.
+
+- Mint page: `/mint`
+- [Human-proof minting guide](docs/HUMAN_PROOF_MINTING.md)
+- [TapeOut integration](docs/TAPEOUT_INTEGRATION.md)
+- [Build X Series submission draft](docs/BUILD-X-SUBMISSION.md)
+- [X Developer Portal guide (Indonesian)](docs/X_DEVELOPER_PORTAL_GUIDE.md)
+
+Status: implemented and tested locally. The registry and factory
+contracts are not deployed yet, our policy circuit is not taped out yet,
+and no proof has been anchored on mainnet — see the submission draft for
+the honest TODO list.
+
+---
+
 ## Product flow
 
 ```text
@@ -203,6 +234,14 @@ The marketplace UI includes:
 | GET | `/api/agent/manifest` | A2MCP service manifest |
 | GET | `/api/x402/service` | x402-protected service |
 | GET | `/api/launch-pass` | Launch Pass status / configuration boundary |
+| GET | `/api/mint/x/authorize` | Start X OAuth for a wallet (redirects to X) |
+| GET | `/api/mint/x/callback` | X OAuth callback; records the X Binding |
+| POST | `/api/mint/message` | Build the binding message the wallet signs (POST so the raw UID never travels in a URL) |
+| POST | `/api/mint/claim` | Submit the signed binding; receive a Human Proof |
+| GET | `/api/mint/proof` | Read the public Human Proof for a wallet |
+| GET | `/api/mint/binding` | Read the X Binding for a wallet |
+| POST | `/api/mint/passport` | Mint Gate: check the proof, evaluate the policy circuit, return mint calldata |
+| GET | `/api/mint/anchor` | Verify a wallet's anchored proof against the on-chain SHA-256 |
 
 The Launch Pass payment route is intentionally **not enabled** in the current production deployment until its x402 activation path is revalidated against the installed SDK.
 
@@ -216,18 +255,41 @@ xaverus/
 │   ├── agents/              # My Agents
 │   ├── activity/            # Activity / audit view
 │   ├── safety/              # Safety Passport
+│   ├── mint/                # Human-proof minting page
 │   └── api/
 │       ├── agent/            # OKX AI safety service
 │       ├── x402/             # x402 seller
+│       ├── mint/             # Human-proof mint API routes
 │       └── launch-pass/      # Launch Pass boundary
 ├── lib/
-│   └── safety.ts             # Deterministic policy engine
+│   ├── safety.ts             # Deterministic policy engine
+│   ├── human-proof.ts        # Human Proof core library
+│   ├── human-proof-store.ts  # Shared proof store singleton
+│   ├── human-proof-file-store.ts # File-backed proof store
+│   ├── mint-response.ts      # Shared mint-route response shapes
+│   ├── mint-tapeout.ts       # Policy-circuit check for the mint decision
+│   ├── mint-transaction.ts   # Factory mint calldata
+│   ├── tapeout-eval-log.ts   # Persistent eval() audit log
+│   ├── x-oauth.ts            # X OAuth 2.0 with PKCE
+│   ├── tapeout-circuit.ts    # Policy circuit simulator + eval() reader
+│   └── tapeout-anchor.ts     # Proof anchoring (SiteRegistry)
+├── circuits/
+│   └── policy-circuit.v      # TapeOut policy circuit (Verilog)
+├── contracts/
+│   ├── XaverusPassport.sol             # Safety Passport (unchanged)
+│   ├── XaverusHumanProofRegistry.sol   # Proof registry
+│   └── XaverusPassportFactory.sol      # Minting factory
 ├── scripts/
-│   └── x402-e2e-test.mjs     # x402 buyer probe
+│   ├── x402-e2e-test.mjs     # x402 buyer probe
+│   ├── mint-routes-e2e.mjs   # Automated mint-route tests (npm run test:routes)
+│   └── anchor-proof.mjs      # Anchor a Human Proof (dry-run by default)
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── OKX_INTEGRATION.md
-│   └── X402_INTEGRATION.md
+│   ├── X402_INTEGRATION.md
+│   ├── HUMAN_PROOF_MINTING.md
+│   ├── TAPEOUT_INTEGRATION.md
+│   └── BUILD-X-SUBMISSION.md
 ├── BUILD_LOG.md
 └── README.md
 ```

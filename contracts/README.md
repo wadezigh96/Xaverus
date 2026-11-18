@@ -27,7 +27,7 @@ The Builder Code address is the X Layer **attribution** boundary when execution 
 Circle-issued native USDC on X Layer mainnet:
 
 ```
-0xB6CEceAB302E2E4948951eE7843FC24e92933061
+0xB6CEceAB302E2E4948951eE7843FC24E92933061
 ```
 
 (6 decimals. Do not use bridged USDC.e / USDC_Bridged.)
@@ -38,7 +38,7 @@ Circle-issued native USDC on X Layer mainnet:
 
 | Arg | Value | Meaning |
 |-----|--------|---------|
-| `asset_` | `0xB6CEceAB302E2E4948951eE7843FC24e92933061` | Native USDC |
+| `asset_` | `0xB6CEceAB302E2E4948951eE7843FC24E92933061` | Native USDC |
 | `perTxLimit_` | `5000000` | 5 USDC |
 | `dailyLimit_` | `25000000` | 25 USDC |
 
@@ -58,7 +58,7 @@ forge build --contracts contracts/XaverusPassport.sol
 cast create contracts/XaverusPassport.sol:XaverusPassport \
   --rpc-url $RPC_URL \
   --private-key $PRIVATE_KEY \
-  0xB6CEceAB302E2E4948951eE7843FC24e92933061 \
+  0xB6CEceAB302E2E4948951eE7843FC24E92933061 \
   5000000 \
   25000000
 ```

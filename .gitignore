@@ -5,3 +5,4 @@ cache/
 out/
 .next/
 coverage/
+tsconfig.tsbuildinfo
