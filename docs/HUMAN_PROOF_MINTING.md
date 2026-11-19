@@ -154,7 +154,10 @@ Start an X OAuth flow for a wallet.
 
 - Query: `?wallet=0x...`
 - Success: `302` redirect to X's authorization page
-  (`https://twitter.com/i/oauth2/authorize`, scope `users.read`, PKCE S256).
+  (`https://twitter.com/i/oauth2/authorize`, scope `tweet.read users.read`,
+  PKCE S256). Both scopes are read-only; X refuses `GET /2/users/me` with
+  a bare 403 when the token carries `users.read` alone (confirmed live
+  19 Nov 2026).
   The server remembers a single-use state value tied to the wallet; the
   flow must complete within 10 minutes.
 - Errors: `400` missing or invalid wallet; `500` X OAuth not configured

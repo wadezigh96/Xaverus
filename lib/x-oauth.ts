@@ -11,7 +11,12 @@ import {getHumanProofStore} from "./human-proof-store.ts";
  *
  * Endpoints (X API v2): authorize https://twitter.com/i/oauth2/authorize,
  * token https://api.x.com/2/oauth2/token, user https://api.x.com/2/users/me.
- * Scope is users.read only: all Xaverus needs is the id and username.
+ * Scope is "tweet.read users.read": all Xaverus needs is the id and
+ * username, but X refuses GET /2/users/me with a bare 403 when the token
+ * carries users.read alone (confirmed live 19 Nov 2026: token exchange
+ * succeeded, users/me returned 403). Both scopes are read-only; the app
+ * never posts. Tokens issued before a scope change keep their old scopes,
+ * so changing this requires every user to authorize again.
  *
  * Secrets: the client secret and the access token never leave the server.
  * The access token is used once to fetch users/me and then discarded; it
@@ -21,7 +26,7 @@ import {getHumanProofStore} from "./human-proof-store.ts";
 export const X_AUTHORIZE_URL = "https://twitter.com/i/oauth2/authorize";
 export const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 export const X_USER_URL = "https://api.x.com/2/users/me";
-export const X_OAUTH_SCOPE = "users.read";
+export const X_OAUTH_SCOPE = "tweet.read users.read";
 /** An OAuth flow must complete within 10 minutes of starting. */
 export const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -175,7 +180,18 @@ async function fetchXJson(args: {
     throw new Error(`X ${args.label} failed: could not reach X.`);
   }
   if (!response.ok) {
-    throw new Error(`X ${args.label} failed (HTTP ${response.status}).`);
+    // Include X's own error body (truncated): the status alone cannot
+    // tell a missing scope from a not-enrolled app, and the body can.
+    // X error bodies are Problem Details JSON with no secrets in them.
+    let detail = "";
+    try {
+      const body = await response.json();
+      const text = typeof body === "string" ? body : JSON.stringify(body);
+      if (text) detail = `: ${text.slice(0, 200)}`;
+    } catch {
+      // A non-JSON error body carries nothing usable; keep the status.
+    }
+    throw new Error(`X ${args.label} failed (HTTP ${response.status})${detail}.`);
   }
   return response.json();
 }
