@@ -127,7 +127,7 @@ export default function Mint() {
   const walletValid = isWalletAddress(wallet);
   const xConnected = xOutcome === "connected";
   const proofReady = proof !== null;
-  const step1Done = xConnected || proofReady;
+  const step1Done = xConnected || proofReady || xUserId !== "";
   const step2Done = okxUid.trim().length > 0 || proofReady;
   const step3Done = proofReady;
 
@@ -171,9 +171,11 @@ export default function Mint() {
     }
   }
 
-  // After returning from X, check the real proof status for this wallet.
+  // On load, and after returning from X, check the real proof status for
+  // this wallet, so a returning wallet with a recorded binding sees its
+  // state without having to press a button.
   useEffect(() => {
-    if (xConnected && walletValid) void refreshProof();
+    if (walletValid) void refreshProof();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xConnected, walletValid]);
 
@@ -447,12 +449,12 @@ export default function Mint() {
           <button className="primary" onClick={connectX} disabled={!walletValid} style={{marginTop: 12}}>
             Connect X
           </button>
-          {xOutcome === "error" && (
+          {xOutcome === "error" && !xUserId && (
             <p style={{color: "#ff9a9a"}}>
               X connection failed or was denied. Check that X is configured on this server and try again.
             </p>
           )}
-          {xConnected && (
+          {(xConnected || xUserId) && (
             <p style={{color: "#a7ffcf"}}>
               X connected. The binding is recorded server-side for this wallet.
             </p>

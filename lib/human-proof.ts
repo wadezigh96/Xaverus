@@ -221,7 +221,13 @@ export function createProofStore(options: CreateProofStoreOptions = {}): ProofSt
         throw new Error("X handle hash must be 64 hex chars.");
       }
       const w = key(args.wallet);
-      if (bindingsByWallet.has(w)) {
+      const existingByWallet = bindingsByWallet.get(w);
+      if (existingByWallet) {
+        // Re-authorizing the SAME X account for the SAME wallet is a
+        // no-op success, not an error: the user may press Connect X again
+        // after a confusing redirect, and the callback must then land on
+        // /mint?x=connected. Only a DIFFERENT X account is a conflict.
+        if (existingByWallet.xUserId === args.xUserId) return existingByWallet;
         throw new ProofStoreError("WALLET_ALREADY_BOUND", "This wallet is already bound to an X account.");
       }
       if (bindingsByX.has(args.xUserId)) {
