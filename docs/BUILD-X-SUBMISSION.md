@@ -12,6 +12,9 @@
 (code last verified at commit `32b79bf`, 19 Nov 2026; wallet-connect
 work verified on branch `wallet-connect/05-docs-submission-regression`
 at commit `77d90a9`, see "Verified evidence")
+**Status:** the wallet-connect work is merged to `main` (PR #3,
+`3deba024`, 19 Nov 2026) and deployed to Vercel; `/mint` is live
+with the Privy login button (verified 19 Nov 2026).
 
 > **This is a draft, not the submitted form.** It is written to be copied
 > into the official submission form at
@@ -219,9 +222,11 @@ here claims they were done.
 - [ ] **Live OKX Wallet signature:** complete a `personal_sign`
       through the OKX extension in a browser and confirm the claim
       succeeds. Guide: `docs/OKX_WALLET_GUIDE.md`.
-- [ ] **Deploy the wallet-connect work** (merge to the integration
+- [x] **Deploy the wallet-connect work** (merge to the integration
       branch, then deploy to Vercel with `NEXT_PUBLIC_PRIVY_APP_ID`
-      set): not done. Needs the user's approval.
+      set): done 19 Nov 2026 — merged to `main` (PR #3, `3deba024`),
+      deployed to Vercel, `/mint` verified live with the Privy login
+      button. All four environment variables are active.
 - [ ] **Tape out the policy circuit:** tape out
       `circuits/policy-circuit.netlist.json` (5 gates) on X Layer; record
       the processor contract address and Circuit ID; open the container.
