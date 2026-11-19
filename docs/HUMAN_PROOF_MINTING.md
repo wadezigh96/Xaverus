@@ -113,7 +113,7 @@ Privy is strictly optional: with no App ID configured, no Privy provider
 is mounted, no Privy login UI renders, and the page behaves exactly as
 before (manual address plus OKX Wallet). The App ID is a public key and
 comes only from `NEXT_PUBLIC_PRIVY_APP_ID`; the Privy App Secret is never
-needed and must never be asked for or used. Setup guide (Indonesian):
+needed and must never be asked for or used. Setup guide:
 [docs/PRIVY_SETUP_GUIDE.md](PRIVY_SETUP_GUIDE.md).
 
 Honest limit: a real Privy login (email OTP or a wallet approval) has
@@ -141,7 +141,7 @@ Honest limit: signing uses `personal_sign`, the standard EIP-1193 method.
 OKX documents `personal_sign` by name for its App Wallet SDK, but its
 official extension documentation does not name it, so a live signature
 through the OKX extension has not been verified yet and stays an open
-item. Nothing here claims otherwise. User guide (Indonesian):
+item. Nothing here claims otherwise. User guide:
 [docs/OKX_WALLET_GUIDE.md](OKX_WALLET_GUIDE.md).
 
 ## API reference
@@ -383,8 +383,8 @@ Signature tests use freshly generated throwaway keys, never a real key.
 | `app/mint/okx-wallet-connect.tsx` | Native OKX Wallet button for the mint page |
 | `app/mint/connected-wallet-status.tsx` | Shared connected-state block for both wallet buttons |
 | `app/mint/use-switch-to-x-layer.ts` | Shared "Switch to X Layer" behaviour for both wallet buttons |
-| `docs/PRIVY_SETUP_GUIDE.md` | Privy setup guide (Indonesian) |
-| `docs/OKX_WALLET_GUIDE.md` | OKX Wallet guide (Indonesian) |
+| `docs/PRIVY_SETUP_GUIDE.md` | Privy setup guide |
+| `docs/OKX_WALLET_GUIDE.md` | OKX Wallet guide |
 | `contracts/XaverusHumanProofRegistry.sol` | Proof registry contract |
 | `contracts/XaverusPassportFactory.sol` | Minting factory contract |
 | `scripts/human-proof-demo.mjs` | Local end-to-end demo of the proof flow (no network) |

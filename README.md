@@ -190,9 +190,9 @@ and without a Privy App ID the app runs exactly as before.
 - [Human-proof minting guide](docs/HUMAN_PROOF_MINTING.md)
 - [TapeOut integration](docs/TAPEOUT_INTEGRATION.md)
 - [Build X Series submission draft](docs/BUILD-X-SUBMISSION.md)
-- [X Developer Portal guide (Indonesian)](docs/X_DEVELOPER_PORTAL_GUIDE.md)
-- [Privy setup guide (Indonesian)](docs/PRIVY_SETUP_GUIDE.md)
-- [OKX Wallet guide (Indonesian)](docs/OKX_WALLET_GUIDE.md)
+- [X Developer Portal guide](docs/X_DEVELOPER_PORTAL_GUIDE.md)
+- [Privy setup guide](docs/PRIVY_SETUP_GUIDE.md)
+- [OKX Wallet guide](docs/OKX_WALLET_GUIDE.md)
 
 Status: implemented and tested locally. The registry and factory
 contracts are not deployed yet, our policy circuit is not taped out yet,
