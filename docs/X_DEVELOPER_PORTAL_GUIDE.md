@@ -4,6 +4,16 @@ Panduan ini untuk membuat aplikasi X yang dipakai fitur human-proof
 minting Xaverus. Aplikasi ini yang memungkinkan pengguna menghubungkan
 akun X.com mereka saat minting Safety Passport.
 
+> **Status (19 Nov 2026): aplikasi Xaverus Mint sudah dibuat** dan
+> pengaturan OAuth-nya sudah disimpan di portal (tipe Web App, Callback
+> URI + Website URL + Terms of Service terisi). Client ID OAuth 2.0
+> sudah dikonfirmasi dan dikonfigurasi lokal. Langkah-langkah di bawah
+> tetap berlaku sebagai referensi — misalnya kalau pengaturan perlu
+> diubah atau Client Secret perlu di-generate ulang — tapi kamu tidak
+> perlu membuat aplikasi baru. Yang masih tersisa: mengisi Client Secret
+> di Vercel (Langkah 7) dan verifikasi OAuth end-to-end di situs live
+> setelah deploy.
+
 Yang kamu butuhkan: akun X.com dan browser. Tidak butuh kartu kredit —
 paket Free sudah cukup, karena Xaverus hanya membaca ID dan nama pengguna
 akun (`users.read`).

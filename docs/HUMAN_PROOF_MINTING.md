@@ -8,10 +8,14 @@ are in `docs/adr/0001-okx-uid-signed-claim.md` (the UID is a signed claim)
 and `docs/adr/0003-mint-gate-beside-passport.md` (the gate lives beside the
 passport contract, not inside it).
 
-**Status (19 Nov 2026):** the full flow is implemented and tested locally.
-No mainnet deployment has happened: the registry and factory contracts are
-not deployed, the X Developer Portal application does not exist yet, and no
-proof has been anchored on mainnet. See
+**Status (19 Nov 2026):** the full flow is implemented and tested locally,
+including wallet connect (Privy login and a native OKX Wallet button —
+see below). No mainnet deployment has happened: the registry and factory
+contracts are not deployed, the policy circuit is not taped out yet, and
+no proof has been anchored on mainnet. The X app "Xaverus Mint" exists
+and its OAuth 2.0 Client ID is confirmed and configured locally; the
+Client Secret stays with the user and goes directly into Vercel, and
+full X OAuth verification happens on the live site after deploy. See
 [docs/BUILD-X-SUBMISSION.md](BUILD-X-SUBMISSION.md) for the honest TODO
 list.
 
@@ -58,9 +62,11 @@ is the `bytes32` the proof registry stores.
 
 The mint page (`app/mint/page.tsx`) walks the user through four steps:
 
-1. **Connect your wallet and X.** Enter a wallet address, then press
-   "Connect X". The browser is redirected to X to approve Xaverus; X
-   returns to `/api/mint/x/callback`, and the server records the X Binding.
+1. **Connect your wallet and X.** Connect a wallet — log in with Privy
+   (email or an external wallet), connect OKX Wallet natively, or type a
+   wallet address by hand — then press "Connect X". The browser is
+   redirected to X to approve Xaverus; X returns to
+   `/api/mint/x/callback`, and the server records the X Binding.
    The X user id then appears on the page automatically (read from
    `/api/mint/binding` — the user never types their numeric id by hand).
 2. **Claim your OKX UID.** Paste the UID from the OKX account. The page
@@ -81,6 +87,60 @@ The mint page (`app/mint/page.tsx`) walks the user through four steps:
 
 Without a Human Proof, step 4 is refused: the page says so, and the mint
 route answers `403`.
+
+### Connecting with Privy
+
+Step 1 offers a Privy login button (`app/mint/privy-wallet-connect.tsx`,
+`lib/privy-config.ts`, `lib/privy-wallet.ts`, `components/providers.tsx`)
+whenever a Privy App ID is configured: log in with email, which creates
+an embedded wallet automatically, or with an external wallet (OKX Wallet
+first, then MetaMask, then detected wallets) through the Privy modal.
+The connected wallet's address fills the wallet field, and the UID claim
+signature (step 3) and the mint transaction (step 4) go through that
+wallet via the shared wallet adapter (`lib/wallet-adapter.ts`), only
+after the SDK reports ready. X Layer is the default and only supported
+chain; the page offers a switch button when the wallet is elsewhere. The
+shared chain definition (`lib/x-layer-chain.ts`) carries the verified
+values (id 196, OKB, official RPCs and explorer); its OKB 18-decimal
+value comes from viem's official chain definition, not from OKX docs,
+which do not state the decimals explicitly. When both Privy and OKX
+Wallet are connected, the most recently connected one signs and sends,
+and the page falls back to the other one if it disconnects.
+
+Privy is strictly optional: with no App ID configured, no Privy provider
+is mounted, no Privy login UI renders, and the page behaves exactly as
+before (manual address plus OKX Wallet). The App ID is a public key and
+comes only from `NEXT_PUBLIC_PRIVY_APP_ID`; the Privy App Secret is never
+needed and must never be asked for or used. Setup guide (Indonesian):
+[docs/PRIVY_SETUP_GUIDE.md](PRIVY_SETUP_GUIDE.md).
+
+Honest limit: a real Privy login (email OTP or a wallet approval) has
+not been completed yet — it needs a human in a browser and stays an open
+item, along with the visual rendering in a browser. The dev-server smoke
+check with the real App ID is done (ticket 03): the dev server started
+clean with the real App ID (no Privy errors or warnings in the log),
+`/mint` returned 200, the Privy SDK chunk loaded, and the "Log in with
+email or wallet" label was present in the client bundle. Nothing here
+claims a live login was verified.
+
+### Connecting with OKX Wallet
+
+Step 1 also offers a native OKX Wallet path (`app/mint/okx-wallet-connect.tsx`,
+`lib/okx-wallet.ts`): one button talks to the OKX extension directly
+through `window.okxwallet`, connects, and moves the wallet to X Layer
+(adding the chain first when the wallet does not have it). The connected
+address fills the wallet field, and the UID claim signature (step 3) and
+the mint transaction (step 4) go through the OKX extension via the shared
+wallet adapter. Typing an address by hand stays available as a fallback.
+When no extension is present, the page links to the official download page
+(`https://web3.okx.com`); no `okx://` deep link is used.
+
+Honest limit: signing uses `personal_sign`, the standard EIP-1193 method.
+OKX documents `personal_sign` by name for its App Wallet SDK, but its
+official extension documentation does not name it, so a live signature
+through the OKX extension has not been verified yet and stays an open
+item. Nothing here claims otherwise. User guide (Indonesian):
+[docs/OKX_WALLET_GUIDE.md](OKX_WALLET_GUIDE.md).
 
 ## API reference
 
@@ -260,7 +320,8 @@ See `.env.example` for the full list with comments. The minting variables:
 | --- | --- | --- |
 | `X_CLIENT_ID` | X OAuth | Public identifier of the X app; not a secret |
 | `X_CLIENT_SECRET` | X OAuth | **Secret.** Never commit it, never paste it in chat |
-| `X_REDIRECT_URI` | X OAuth | Must match the callback URL registered in the X app exactly |
+| `X_REDIRECT_URI` | X OAuth | Must match the callback URL registered in the X app exactly. Production: `https://xaverus.vercel.app/api/mint/x/callback`; local: `http://localhost:3000/api/mint/x/callback` |
+| `NEXT_PUBLIC_PRIVY_APP_ID` | Privy login | Public App ID from dashboard.privy.io (see [docs/PRIVY_SETUP_GUIDE.md](PRIVY_SETUP_GUIDE.md)). Optional: when unset, no Privy provider is mounted and the mint page works as before. The Privy App Secret is never needed |
 | `XAVERUS_PROOF_STORE_PATH` | Proof persistence | JSON file path; when set, bindings and proofs survive a server restart; when unset, the store is in-memory only. Required for anchoring (`scripts/anchor-proof.mjs`) |
 | `XAVERUS_PASSPORT_FACTORY` | Minting | Deployed factory address; without it `/api/mint/passport` answers `allowed: true` with `transaction: null` |
 | `XAVERUS_TAPEOUT_PROCESSOR` | Policy circuit | Processor contract address (see `docs/TAPEOUT_INTEGRATION.md`) |
@@ -285,8 +346,9 @@ These rules bind every surface — UI, API, docs, and submission:
 ## Tests
 
 ```bash
-node --test lib/*.test.ts        # 104 tests (19 Nov 2026), incl. the 6 pre-existing safety tests
+node --test lib/*.test.ts        # 186 tests (19 Nov 2026), incl. the 6 pre-existing safety tests
 forge test                        # 12 tests for the registry and factory
+npm run test:routes               # 35 mint route checks over HTTP against the production build
 ```
 
 X's API is never called by tests: the OAuth exchange is tested behind a
@@ -303,8 +365,21 @@ Signature tests use freshly generated throwaway keys, never a real key.
 | `lib/x-oauth.ts` | X OAuth 2.0 with PKCE (S256), server-side only |
 | `lib/mint-transaction.ts` | Factory `mint()` calldata builder |
 | `lib/mint-tapeout.ts` | TapeOut half of the mint decision |
+| `lib/wallet-adapter.ts` | Shared wallet seam: address, chain id, sign, send, switch to X Layer |
+| `lib/wallet-ui.ts` | Shared wallet UI helpers: error and refusal messages, address shortening, the disconnect field rule |
+| `lib/x-layer-chain.ts` | The one X Layer chain definition (id 196, OKB, official RPCs and explorer) |
+| `lib/privy-config.ts` | Privy config builder (pure function of env; undefined setup without an App ID) |
+| `lib/privy-wallet.ts` | Privy wallet (embedded or external) behind the wallet seam |
+| `lib/okx-wallet.ts` | Native OKX Wallet module (`window.okxwallet`, never `window.ethereum`) |
+| `components/providers.tsx` | Client-side providers; mounts the Privy provider only when an App ID is configured |
 | `app/api/mint/**` | The eight mint routes (see above) |
 | `app/mint/page.tsx` | The four-step mint page |
+| `app/mint/privy-wallet-connect.tsx` | Privy login button for the mint page |
+| `app/mint/okx-wallet-connect.tsx` | Native OKX Wallet button for the mint page |
+| `app/mint/connected-wallet-status.tsx` | Shared connected-state block for both wallet buttons |
+| `app/mint/use-switch-to-x-layer.ts` | Shared "Switch to X Layer" behaviour for both wallet buttons |
+| `docs/PRIVY_SETUP_GUIDE.md` | Privy setup guide (Indonesian) |
+| `docs/OKX_WALLET_GUIDE.md` | OKX Wallet guide (Indonesian) |
 | `contracts/XaverusHumanProofRegistry.sol` | Proof registry contract |
 | `contracts/XaverusPassportFactory.sol` | Minting factory contract |
 | `scripts/human-proof-demo.mjs` | Local end-to-end demo of the proof flow (no network) |

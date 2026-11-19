@@ -46,6 +46,7 @@ Xaverus turns agent payment intent into a policy decision before execution.
 - 🧱 **Server-side decision layer** — the browser is treated as an untrusted UI; the wallet remains the signing boundary.
 - 🪪 **Human-proof minting** — a Safety Passport is minted only with a Human Proof: an X account verified through X OAuth plus a wallet-signed OKX UID claim (the UID is a user-signed claim, never a verification by OKX).
 - 🔌 **TapeOut integration** — the mint rule is enforced openly by a small NAND policy circuit evaluated read-only through `eval()`, and each Human Proof is anchored as a hash file in the circuit's container.
+- 🔑 **Wallet connect for minting** — log in with email (Privy creates an embedded wallet automatically) or connect OKX Wallet natively with one button; the wallet is moved to X Layer automatically and the address fills itself in.
 
 ---
 
@@ -178,11 +179,20 @@ enforced openly by a small TapeOut NAND policy circuit evaluated
 read-only through `eval()`, and each proof is anchored as a hash file in
 the circuit's container.
 
+Wallet connect is part of the same new work: the mint page offers Privy
+login (email, which creates an embedded wallet automatically, or an
+external wallet) and a native OKX Wallet button, both feeding one shared
+wallet adapter that moves the wallet to X Layer and fills the address in
+automatically. Typing an address by hand stays available as a fallback,
+and without a Privy App ID the app runs exactly as before.
+
 - Mint page: `/mint`
 - [Human-proof minting guide](docs/HUMAN_PROOF_MINTING.md)
 - [TapeOut integration](docs/TAPEOUT_INTEGRATION.md)
 - [Build X Series submission draft](docs/BUILD-X-SUBMISSION.md)
 - [X Developer Portal guide (Indonesian)](docs/X_DEVELOPER_PORTAL_GUIDE.md)
+- [Privy setup guide (Indonesian)](docs/PRIVY_SETUP_GUIDE.md)
+- [OKX Wallet guide (Indonesian)](docs/OKX_WALLET_GUIDE.md)
 
 Status: implemented and tested locally. The registry and factory
 contracts are not deployed yet, our policy circuit is not taped out yet,
@@ -256,11 +266,16 @@ xaverus/
 │   ├── activity/            # Activity / audit view
 │   ├── safety/              # Safety Passport
 │   ├── mint/                # Human-proof minting page
+│   │   ├── page.tsx              # Four-step mint page
+│   │   ├── privy-wallet-connect.tsx # Privy login button
+│   │   └── okx-wallet-connect.tsx   # Native OKX Wallet button
 │   └── api/
 │       ├── agent/            # OKX AI safety service
 │       ├── x402/             # x402 seller
 │       ├── mint/             # Human-proof mint API routes
 │       └── launch-pass/      # Launch Pass boundary
+├── components/
+│   └── providers.tsx         # Client-side providers (Privy, optional)
 ├── lib/
 │   ├── safety.ts             # Deterministic policy engine
 │   ├── human-proof.ts        # Human Proof core library
@@ -272,7 +287,12 @@ xaverus/
 │   ├── tapeout-eval-log.ts   # Persistent eval() audit log
 │   ├── x-oauth.ts            # X OAuth 2.0 with PKCE
 │   ├── tapeout-circuit.ts    # Policy circuit simulator + eval() reader
-│   └── tapeout-anchor.ts     # Proof anchoring (SiteRegistry)
+│   ├── tapeout-anchor.ts     # Proof anchoring (SiteRegistry)
+│   ├── wallet-adapter.ts     # Shared wallet seam (sign, send, switch)
+│   ├── x-layer-chain.ts      # The one X Layer chain definition
+│   ├── privy-config.ts       # Privy config builder (pure function)
+│   ├── privy-wallet.ts       # Privy wallet behind the wallet seam
+│   └── okx-wallet.ts         # Native OKX Wallet module
 ├── circuits/
 │   └── policy-circuit.v      # TapeOut policy circuit (Verilog)
 ├── contracts/
@@ -289,6 +309,8 @@ xaverus/
 │   ├── X402_INTEGRATION.md
 │   ├── HUMAN_PROOF_MINTING.md
 │   ├── TAPEOUT_INTEGRATION.md
+│   ├── PRIVY_SETUP_GUIDE.md
+│   ├── OKX_WALLET_GUIDE.md
 │   └── BUILD-X-SUBMISSION.md
 ├── BUILD_LOG.md
 └── README.md

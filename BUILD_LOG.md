@@ -253,6 +253,139 @@ was accepted as-is.
   body like the claim route, never in a URL query string; the GET
   handler is gone and the mint page posts instead.
 
+### 8. Wallet connect for minting (Privy + native OKX Wallet)
+
+The mint page no longer asks the user to type a wallet address by hand
+as the only path. Two wallet-connect modules feed the same mint flow
+through one shared wallet seam (`lib/wallet-adapter.ts`: address, chain
+id, sign a message, send a transaction, switch to X Layer), built on one
+shared X Layer chain definition (`lib/x-layer-chain.ts`: id 196, name
+"X Layer mainnet", OKB, RPC `https://rpc.xlayer.tech` with
+`https://xlayerrpc.okx.com` as backup, explorer
+`https://www.okx.com/web3/explorer/xlayer`). The OKB 18-decimal value
+comes from viem's official chain definition, not from OKX docs, which
+do not state the decimals explicitly.
+
+- **Privy login** (`components/providers.tsx`, `lib/privy-config.ts`,
+  `lib/privy-wallet.ts`, `app/mint/privy-wallet-connect.tsx`): log in
+  with email, which creates an embedded wallet automatically, or with an
+  external wallet (OKX Wallet first, then MetaMask, then detected
+  wallets) through the Privy modal. X Layer is the default and only
+  supported chain; the embedded-wallet RPC is overridden to the official
+  X Layer RPC. Privy is strictly optional: with no App ID configured, no
+  provider is mounted and the app behaves exactly as before. The App ID
+  comes only from `NEXT_PUBLIC_PRIVY_APP_ID`; the Privy App Secret is
+  never needed. Setup guide: `docs/PRIVY_SETUP_GUIDE.md`.
+- **Native OKX Wallet** (`lib/okx-wallet.ts`,
+  `app/mint/okx-wallet-connect.tsx`): one button talks to the OKX
+  extension directly through `window.okxwallet` (never
+  `window.ethereum`), connects, and moves the wallet to X Layer (adding
+  the chain first on error 4902, then verifying the chain afterwards).
+  A refused request (error 4001) is a polite message plus a retry
+  button; account and chain changes update the UI reactively. Without
+  the extension, the page links to the official download page
+  (`https://web3.okx.com`); no `okx://` deep link is used. Honest limit:
+  `personal_sign` through the extension awaits live verification.
+  User guide: `docs/OKX_WALLET_GUIDE.md`.
+- Typing an address by hand stays available as a fallback, and the most
+  recently connected wallet signs and sends.
+
+### 9. Code-review fix round, wallet connect (19 Nov 2026)
+
+After tickets 01–05, a two-axis code review (Standards + Spec) produced
+13 findings; 12 were fixed, 1 (unifying the three chain-id parsers) was
+deliberately left alone: the parsers have different contracts on
+purpose (strict CAIP-2 only, normalised-hex comparison, raw hex to
+number where a bad value already flows into the not-on-X-Layer error),
+and forcing one parser would change edge-case behaviour.
+
+- **OKB decimals attribution (Spec 1):** the OKB 18-decimal value comes
+  from viem's official chain definition, not from OKX docs — now stated
+  in `docs/HUMAN_PROOF_MINTING.md` and in section 8 above, as the spec
+  required, not only in the code comment.
+- **Mint page with an App ID, checked automatically (Spec 2):**
+  `scripts/mint-routes-e2e.mjs` now runs a second phase: a build into a
+  separate output directory (`.next-appid`, via a `NEXT_DIST_DIR`
+  setting in `next.config.ts`) with a valid-format placeholder App ID
+  baked in, then serves it and checks `/mint` returns 200, renders the
+  mint steps, and really has the App ID in its bundle. The second build
+  is removed afterwards, and `next-env.d.ts` / `tsconfig.json` (which
+  the App ID build rewrites) are restored, so the run leaves the tree
+  exactly as it found it. 35 route checks now (was 31).
+- **Last-connected wallet rule recorded (Spec 3):** the rule was
+  already in the code and in this log; it is now also in the spec
+  (`.scratch/wallet-connect/SPEC.md`) and in
+  `docs/HUMAN_PROOF_MINTING.md`, so spec and code agree.
+- **Dependency order restored (Spec 4):** `package.json` is back to
+  its pre-wallet-connect order, with the two Privy dependencies kept at
+  the end; `npm ci` still works and the lockfile is unchanged.
+- **OTP lifetime claim removed (Spec 5):** the Privy guide no longer
+  says the email code "lasts 10 minutes" — it says the code expires
+  soon and to enter it promptly, with no invented number.
+- **Smoke check status aligned (Spec 6):**
+  `docs/HUMAN_PROOF_MINTING.md` now says the dev-server smoke check
+  with the real App ID is done (ticket 03); only the visual rendering
+  in a browser and a real login stay open.
+- **Disconnect clears the wallet field (Spec 7, bug):** when a wallet
+  disconnects, the mint page now clears the address field — but only
+  when the field still shows that wallet's address, so a manually typed
+  address is never erased. The rule lives in `walletFieldAfterDisconnect`
+  (`lib/wallet-ui.ts`), covered by tests; the saved address in
+  localStorage is cleared with it, so a reload does not restore a
+  disconnected wallet.
+- **Shared wallet UI helpers (Standards 8–10):** `lib/wallet-ui.ts`
+  holds the one copies of `errorMessage`, `shortAddress`, the polite
+  refusal messages (`userRejectionMessage`, plus `walletErrorMessage`,
+  the one place that decides refusal vs. real failure), and the shared
+  `WalletConnectProps`. `ConnectedWallet` (address plus adapter, as
+  one object) lives in `lib/wallet-adapter.ts` beside
+  `notOnXLayerMessage`, the one wrong-chain message. Both connect
+  buttons share the connected-state block
+  (`app/mint/connected-wallet-status.tsx`) and the switch behaviour
+  (`app/mint/use-switch-to-x-layer.ts`); the mint page has one connect
+  handler and one account-change handler for both wallet sources.
+- **Primary RPC accessor (Standards 11):** `xLayerPrimaryRpcUrl()` in
+  `lib/x-layer-chain.ts` replaces the `rpcUrls.default.http[0]` chain
+  in the Privy config.
+- **Clear global name (Standards 13):** the one-letter `w` for the
+  global object is `globalObject` in `getOkxWalletProvider` (and in
+  the mint page's `getEthereum`, same pattern).
+
+Relevant commits:
+- fix(wallet-connect): code-review fix round (13 findings)
+
+**App ID build gotcha (found in this fix round):** a `next build` with
+a different `NEXT_DIST_DIR` rewrites `next-env.d.ts` and
+`tsconfig.json` to point at that output directory. The route script
+snapshots both files before the App ID build and restores them
+afterwards. (A plain `next build` also rewrites `next-env.d.ts` to
+point at `.next` — pre-existing behaviour of this Next version, not
+something this build introduced; the file is reverted after builds.)
+
+Relevant commits:
+- feat: shared wallet adapter + X Layer chain definition (wallet ticket 01)
+- feat: Privy provider + config with graceful degradation (wallet ticket 02)
+- feat: native OKX Wallet module (wallet ticket 04)
+- feat: mint page wired to Privy (wallet ticket 03)
+
+**Privy install gotcha (found in wallet ticket 02):** plain
+`npm install @privy-io/react-auth` fails with ERESOLVE — Privy's
+optional peer `permissionless` wants `ox ^0.8` while viem pins
+`ox 0.14.63`. `--legacy-peer-deps` produces a BROKEN resolution
+(ox 0.6.9) and must not be used. The working install used `--force`,
+which keeps viem's exact pins nested under `node_modules/viem`, and
+`npm ci` from the resulting lockfile works normally. The lockfile keeps
+exactly one viem copy (2.57.17).
+
+**Route e2e server leak (found in wallet ticket 02, fixed in wallet
+ticket 05):** `scripts/mint-routes-e2e.mjs` killed only the `npx`
+parent on SIGTERM and left the `next-server` child alive on port 3123,
+polluting later runs. The script now spawns the server detached (its
+own process group) and kills the whole group on shutdown, with a
+SIGKILL fallback and signal handlers for interrupted runs. Verified:
+two consecutive `npm run test:routes` runs, 31/31 checks each, no
+listener and no `next-server` process left on port 3123 afterwards.
+
 ## Verified evidence (19 Nov 2026)
 
 Run locally on branch `build-x/human-proof-mint`:
@@ -267,6 +400,42 @@ Run locally on branch `build-x/human-proof-mint`:
 | `eval()` live probe (`scripts/tapeout-eval-probe.mjs`) | Succeeds against X Layer mainnet circuits 1.2.245 and XBOT 3.2.268 |
 | Anchor fork test (`scripts/tapeout-anchor-fork-test.mjs`) | Passes on an anvil fork against the real SiteRegistry |
 | End-to-end HTTP smoke test | Replaced by the automated route tests above (same coverage, now in CI); mint without proof → `403`; `eval()` failure → `503` |
+
+## Verified evidence, wallet connect (19 Nov 2026, ticket 05)
+
+Full regression rerun on branch `wallet-connect/05-docs-submission-regression`
+after the wallet modules (tickets 01–04) and the route-script leak fix:
+
+| Check | Result |
+|---|---|
+| TypeScript tests (`node --test lib/*.test.ts`) | **169 passed, 0 failed** (incl. the 6 pre-existing safety tests) |
+| Foundry tests (`forge test`) | **12 passed, 0 failed** (registry + factory) |
+| Type check (`npx tsc --noEmit`) | Clean |
+| Production build (`npm run build`) | Passes |
+| Mint route tests (`npm run test:routes`) | **31/31 checks passed** over HTTP against the production build, twice in a row; no process left on port 3123 after either run |
+| `contracts/XaverusPassport.sol` vs `main` | **Unchanged** (`git diff main -- contracts/XaverusPassport.sol` empty) |
+| Secret scan of tracked files | No secret and no real App ID / Client ID value in any tracked file |
+| Dev-server smoke check with the real Privy App ID | Done (ticket 03): the dev server started clean with the real App ID (no Privy errors or warnings in the log), `/mint` returned 200, the Privy SDK chunk loaded, and the "Log in with email or wallet" label was present in the client bundle; the "Connect OKX Wallet" button was in the same bundle. Visual rendering in a browser and a real login still need a human. |
+
+Not verified live (honest open items, see "Still pending"): a real Privy
+login (email OTP or wallet approval), a `personal_sign` through the OKX
+extension, and full X OAuth end-to-end on the live site.
+
+## Verified evidence, wallet-connect fix round (19 Nov 2026)
+
+Full regression rerun on branch `wallet-connect/fix-review` after the
+code-review fix round (section 9):
+
+| Check | Result |
+|---|---|
+| TypeScript tests (`node --test lib/*.test.ts`) | **186 passed, 0 failed** (169 before the round + 17 new: shared wallet UI helpers, wrong-chain message, primary RPC accessor, disconnect field rule) |
+| Foundry tests (`forge test`) | **12 passed, 0 failed** (registry + factory) |
+| Type check (`npx tsc --noEmit`) | Clean |
+| Production build (`npm run build`) | Passes |
+| Mint route tests (`npm run test:routes`) | **35/35 checks passed** over HTTP against the production build (31 before the round + 4 new: `/mint` 200 with a placeholder App ID configured, mint steps render with it, App ID baked into the served bundle, no App ID baked in without one) |
+| `contracts/XaverusPassport.sol` vs `main` | **Unchanged** (`git diff main -- contracts/XaverusPassport.sol` empty) |
+| Degradation without an App ID | Unchanged: no Privy provider mounted, no Privy login UI, manual address plus OKX Wallet as before (route checks) |
+| Port 3123 after the route run | No listener and no `next-server` process left; `.next-appid` removed, `next-env.d.ts` / `tsconfig.json` restored |
 
 ## Regression check (19 Nov 2026, ticket 08)
 
@@ -323,14 +492,66 @@ safety-check decision paths exercised live against the on-chain policy:
   kept from the review: the on-chain asset reads back as
   `0xB6CEceAB302E2E4948951eE7843FC24E92933061`, the corrected address.
 
+## Regression check, wallet connect (19 Nov 2026, ticket 05)
+
+Same production-build smoke test, repeated after the wallet modules and
+the route-script leak fix, plus the safety-check decision paths
+exercised live against the on-chain policy (request header
+`X-Xaverus-Request-ID` and a valid recipient address are required by
+the route):
+
+| Route | Result |
+|---|---|
+| `/` | 200 |
+| `/safety` | 200 |
+| `/agents` | 200 |
+| `/activity` | 200 (with `XAVERUS_PASSPORT_DEPLOYMENT_BLOCK` set to a recent block; see note above) |
+| `/mint` (new) | 200; no Privy login UI without an App ID configured (route check + spot check) |
+| `/api/health` | 200 |
+| `/api/x402/service` | 503 without credentials — expected, unchanged pre-existing behaviour |
+| `/api/agent/manifest` | 200 |
+| `POST /api/agent/safety-check`, 1 USDC vs 5 cap | 200, `allowed: true` ("On-chain policy checks passed.") |
+| `POST /api/agent/safety-check`, 6 USDC vs 5 cap | 200, `allowed: false` ("Transaction exceeds the on-chain per-transaction limit.") |
+| `POST /api/mint/passport` without proof (new) | 403, as designed |
+
+- `contracts/XaverusPassport.sol` is still unchanged vs `main`
+  (`git diff main -- contracts/XaverusPassport.sol` is empty).
+- All 6 pre-existing safety tests still pass (part of the 169 above).
+- The live safety-check response again confirms the USDC checksum fix:
+  the on-chain asset reads back as
+  `0xB6CEceAB302E2E4948951eE7843FC24E92933061`.
+- The OKX Wallet button renders only after the page mounts in the
+  browser (it reads `window.okxwallet` post-mount to avoid a hydration
+  mismatch), so it is not visible in server-rendered HTML — that is
+  intended, not a regression. The button's behaviour is covered by the
+  OKX unit tests behind a mocked provider.
+
 ## Still pending (human steps)
 
 - Demo video (≤ 3 minutes): not recorded yet.
 - Submission form: not filled in yet (draft in
   `docs/BUILD-X-SUBMISSION.md`).
-- X Developer Portal application: not created yet (guide in
-  `docs/X_DEVELOPER_PORTAL_GUIDE.md`); `X_CLIENT_ID`,
-  `X_CLIENT_SECRET`, `X_REDIRECT_URI` unset.
+- X Developer Portal application: the "Xaverus Mint" app exists and its
+  OAuth 2.0 Client ID is confirmed (via a user correction on 19 Nov
+  2026 — the base64-shaped value, not the standard-looking one sent
+  first) and configured locally. The Client Secret stays with the user
+  and goes directly into Vercel; full X OAuth end-to-end verification
+  happens on the live site after deploy. The first, standard-looking
+  candidate is NOT the Client ID and must not be used — it is only a
+  backup to try if live OAuth is ever rejected. (Guide in
+  `docs/X_DEVELOPER_PORTAL_GUIDE.md`.)
+- Live Privy login: not done — completing a real login (email OTP or a
+  wallet approval) needs a human in a browser. The dev-server smoke
+  check with the real App ID IS done (dev server clean, `/mint` 200,
+  SDK chunk loaded, connect button in the bundle — see the
+  wallet-connect evidence table above); only the visual render and
+  the real login remain open. (Guide in
+  `docs/PRIVY_SETUP_GUIDE.md`.)
+- Live OKX Wallet signature: not done — `personal_sign` through the
+  OKX extension awaits live verification. (Guide in
+  `docs/OKX_WALLET_GUIDE.md`.)
+- Deploy the wallet-connect work to Vercel (merge to the integration
+  branch, then deploy): not done. Needs the user's approval.
 - Tape out the policy circuit on X Layer mainnet: not done — no Circuit
   ID, processor address, or container yet. Needs real OKB.
 - Deploy the registry and factory contracts to mainnet: not done. Needs

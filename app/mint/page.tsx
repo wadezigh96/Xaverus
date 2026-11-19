@@ -1,7 +1,23 @@
 "use client";
 
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import Link from "next/link";
+import {
+  createBrowserWalletAdapter,
+  notOnXLayerMessage,
+  type ConnectedWallet,
+  type Eip1193Provider,
+  type WalletAdapter,
+} from "../../lib/wallet-adapter";
+import {
+  errorMessage,
+  walletErrorMessage,
+  walletFieldAfterDisconnect,
+} from "../../lib/wallet-ui";
+import {resolvePrivyAppId} from "../../lib/privy-config";
+import {X_LAYER_CHAIN_ID} from "../../lib/x-layer-chain";
+import OkxWalletConnect from "./okx-wallet-connect";
+import PrivyWalletConnect from "./privy-wallet-connect";
 
 /**
  * Mint a human-proofed Safety Passport: connect X, claim an OKX UID, sign the
@@ -29,12 +45,12 @@ type MintTransaction = {
   chainId: number;
 };
 
-type EthereumProvider = {
-  request: (args: {method: string; params?: unknown[]}) => Promise<unknown>;
-};
+type EthereumProvider = Eip1193Provider;
+
+/** Which wallet source a connect or account change came from. */
+type WalletSource = "okx" | "privy";
 
 const WALLET_STORAGE_KEY = "xaverus_mint_wallet";
-const X_LAYER_CHAIN_ID_HEX = "0xc4"; // 196
 const UID_CLAIM_NOTE = "The OKX UID is your own signed claim, not a verification by OKX.";
 
 function isWalletAddress(value: string): boolean {
@@ -42,21 +58,12 @@ function isWalletAddress(value: string): boolean {
 }
 
 function getEthereum(): EthereumProvider | undefined {
-  const w = globalThis as unknown as {ethereum?: EthereumProvider};
-  return w.ethereum;
-}
-
-function toHex(text: string): string {
-  const bytes = new TextEncoder().encode(text);
-  return "0x" + Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const globalObject = globalThis as unknown as {ethereum?: EthereumProvider};
+  return globalObject.ethereum;
 }
 
 function shortHash(hash: string): string {
   return hash.length > 18 ? hash.slice(0, 10) + "…" + hash.slice(-6) : hash;
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Something went wrong.";
 }
 
 export default function Mint() {
@@ -79,6 +86,26 @@ export default function Mint() {
   // Set after mount only: reading window.ethereum during render would differ
   // between the server render and the browser and break hydration.
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
+  // The OKX Wallet adapter once connected: sign and send go through it
+  // instead of the generic browser provider, via the same wallet seam.
+  const [okxAdapter, setOkxAdapter] = useState<WalletAdapter | null>(null);
+  // The Privy wallet adapter once logged in: same seam, same role.
+  const [privyAdapter, setPrivyAdapter] = useState<WalletAdapter | null>(null);
+  // Which wallet connected most recently: when both OKX and Privy are
+  // connected, the last one the user picked is the one that signs and
+  // sends, matching the address it filled into the wallet field.
+  const [lastWalletSource, setLastWalletSource] = useState<WalletSource | null>(null);
+  // The address each wallet source last connected with, in a ref so the
+  // account-change handlers always read the current one: on disconnect,
+  // the wallet field is cleared only when it still shows that address
+  // (a manually typed address is never erased by a disconnect).
+  const connectedAddressRef = useRef<Record<WalletSource, string>>({okx: "", privy: ""});
+  // Privy is configured only when an App ID is set; without one, no Privy
+  // UI renders at all and the page behaves exactly as before. The env var
+  // is inlined at build time, so this is identical on server and client.
+  const privyConfigured =
+    resolvePrivyAppId({NEXT_PUBLIC_PRIVY_APP_ID: process.env.NEXT_PUBLIC_PRIVY_APP_ID}) !==
+    undefined;
 
   // Restore the wallet across the X OAuth round-trip, and read the outcome
   // the callback left in the URL (?x=connected or ?x=error).
@@ -92,6 +119,9 @@ export default function Mint() {
 
   useEffect(() => {
     if (wallet) localStorage.setItem(WALLET_STORAGE_KEY, wallet.trim());
+    // An emptied field clears the saved address too, so a disconnected
+    // wallet is not restored by a reload after the field was cleared.
+    else localStorage.removeItem(WALLET_STORAGE_KEY);
   }, [wallet]);
 
   const walletValid = isWalletAddress(wallet);
@@ -152,6 +182,56 @@ export default function Mint() {
     window.location.href = `/api/mint/x/authorize?wallet=${encodeURIComponent(wallet.trim())}`;
   }
 
+  // A wallet connected (OKX or Privy): its address fills the wallet
+  // field, its adapter signs the UID claim and sends the mint
+  // transaction, and it becomes the wallet that signs and sends until
+  // the other wallet connects.
+  function handleWalletConnected(source: WalletSource, wallet: ConnectedWallet) {
+    if (source === "okx") setOkxAdapter(wallet.adapter);
+    else setPrivyAdapter(wallet.adapter);
+    connectedAddressRef.current[source] = wallet.address;
+    setWallet(wallet.address);
+    setLastWalletSource(source);
+  }
+
+  // The account changed inside a wallet, or the wallet disconnected:
+  // follow it. On disconnect the wallet field is cleared only when it
+  // still shows that wallet's address; a manually typed address stays.
+  function handleWalletAccountChanged(source: WalletSource, address: string | null) {
+    if (address) {
+      connectedAddressRef.current[source] = address;
+      setWallet(address);
+      return;
+    }
+    if (source === "okx") setOkxAdapter(null);
+    else setPrivyAdapter(null);
+    const disconnected = connectedAddressRef.current[source];
+    connectedAddressRef.current[source] = "";
+    setWallet((current) => walletFieldAfterDisconnect(current, disconnected));
+  }
+
+  // The wallet the mint flow signs and sends with: the most recently
+  // connected wallet when there is one (falling back to the other
+  // connected wallet when that one disconnects), otherwise the generic
+  // browser provider. The address-match checks in signBinding and
+  // sendMint still guard against a manually edited wallet field.
+  function mintAdapter(): WalletAdapter | null {
+    if (lastWalletSource === "privy" && privyAdapter) return privyAdapter;
+    if (lastWalletSource === "okx" && okxAdapter) return okxAdapter;
+    if (privyAdapter) return privyAdapter;
+    if (okxAdapter) return okxAdapter;
+    const ethereum = getEthereum();
+    return ethereum ? createBrowserWalletAdapter(ethereum) : null;
+  }
+
+  // What to tell the user when no wallet is connected at all: with Privy
+  // configured, logging in with an email is enough, no install needed.
+  function noWalletMessage(): string {
+    return privyConfigured
+      ? "No wallet connected. Log in with Privy above (email or wallet), or install OKX Wallet or MetaMask, then reload this page."
+      : "No wallet found in this browser. Install OKX Wallet or MetaMask, then reload this page.";
+  }
+
   async function signBinding() {
     setSignError("");
     setSignMessage("");
@@ -163,11 +243,9 @@ export default function Mint() {
       setSignError("Connect X first so the server knows your X account.");
       return;
     }
-    const ethereum = getEthereum();
-    if (!ethereum) {
-      setSignError(
-        "No wallet found in this browser. Install OKX Wallet or MetaMask, then reload this page."
-      );
+    const adapter = mintAdapter();
+    if (!adapter) {
+      setSignError(noWalletMessage());
       return;
     }
     setSigning(true);
@@ -186,19 +264,14 @@ export default function Mint() {
         throw new Error(messageData.error || "Could not build the binding message.");
       }
 
-      const accounts = (await ethereum.request({method: "eth_requestAccounts"})) as string[];
-      const connected = accounts[0] ?? "";
-      if (!connected) throw new Error("No wallet account is connected.");
+      const connected = await adapter.getAddress();
       if (connected.toLowerCase() !== wallet.trim().toLowerCase()) {
         throw new Error(
           `The connected wallet (${connected}) is not the wallet you entered (${wallet.trim()}). Switch accounts in your wallet and try again.`
         );
       }
 
-      const signature = (await ethereum.request({
-        method: "personal_sign",
-        params: [toHex(messageData.message as string), connected],
-      })) as string;
+      const signature = await adapter.signMessage(messageData.message as string);
 
       const claimRes = await fetch("/api/mint/claim", {
         method: "POST",
@@ -218,7 +291,7 @@ export default function Mint() {
       setProof(claimData.proof as PublicProof);
       setSignMessage("Human Proof issued. Your X Binding and OKX UID claim are now bound to this wallet.");
     } catch (error) {
-      setSignError(errorMessage(error));
+      setSignError(walletErrorMessage(error, "sign", "your wallet"));
     } finally {
       setSigning(false);
     }
@@ -261,44 +334,31 @@ export default function Mint() {
   async function sendMint() {
     setMintError("");
     if (!transaction) return;
-    const ethereum = getEthereum();
-    if (!ethereum) {
-      setMintError(
-        "No wallet found in this browser. Install OKX Wallet or MetaMask, then reload this page."
-      );
+    const adapter = mintAdapter();
+    if (!adapter) {
+      setMintError(noWalletMessage());
       return;
     }
     setSending(true);
     try {
-      const chainId = (await ethereum.request({method: "eth_chainId"})) as string;
-      if (chainId.toLowerCase() !== X_LAYER_CHAIN_ID_HEX) {
-        throw new Error(
-          "Your wallet is not on X Layer (chain 196). Switch networks in your wallet and try again."
-        );
+      const chainId = await adapter.getChainId();
+      if (chainId !== X_LAYER_CHAIN_ID) {
+        throw new Error(notOnXLayerMessage());
       }
-      const accounts = (await ethereum.request({method: "eth_requestAccounts"})) as string[];
-      const from = accounts[0] ?? "";
-      if (!from) throw new Error("No wallet account is connected.");
+      const from = await adapter.getAddress();
       if (from.toLowerCase() !== wallet.trim().toLowerCase()) {
         throw new Error(
           `The connected wallet (${from}) is not the wallet you entered (${wallet.trim()}). Switch accounts in your wallet and try again.`
         );
       }
-      const hash = (await ethereum.request({
-        method: "eth_sendTransaction",
-        params: [
-          {
-            from,
-            to: transaction.to,
-            data: transaction.data,
-            value: transaction.value,
-            chainId: X_LAYER_CHAIN_ID_HEX,
-          },
-        ],
-      })) as string;
+      const hash = await adapter.sendTransaction({
+        to: transaction.to,
+        data: transaction.data,
+        value: transaction.value,
+      });
       setTxHash(hash);
     } catch (error) {
-      setMintError(errorMessage(error));
+      setMintError(walletErrorMessage(error, "send", "your wallet"));
     } finally {
       setSending(false);
     }
@@ -373,6 +433,16 @@ export default function Mint() {
           </label>
           {wallet && !walletValid && (
             <p style={{color: "#ff9a9a"}}>That does not look like a wallet address (0x followed by 40 hex characters).</p>
+          )}
+          <OkxWalletConnect
+            onConnected={(wallet) => handleWalletConnected("okx", wallet)}
+            onAccountChanged={(address) => handleWalletAccountChanged("okx", address)}
+          />
+          {privyConfigured && (
+            <PrivyWalletConnect
+              onConnected={(wallet) => handleWalletConnected("privy", wallet)}
+              onAccountChanged={(address) => handleWalletAccountChanged("privy", address)}
+            />
           )}
           <button className="primary" onClick={connectX} disabled={!walletValid} style={{marginTop: 12}}>
             Connect X
@@ -452,7 +522,7 @@ export default function Mint() {
           >
             {signing ? "Waiting for signature…" : proofReady ? "Proof already issued" : "Sign binding"}
           </button>
-          {hasWallet === false && (
+          {hasWallet === false && !privyConfigured && (
             <p>
               No wallet detected in this browser. Install OKX Wallet or MetaMask to sign, then
               reload this page.
