@@ -37,6 +37,8 @@ A Human Proof is exactly two parts, both bound to the same wallet:
 Either part missing means no proof, and the Mint Gate refuses the mint.
 One X account binds to at most one wallet, and one wallet holds at most
 one Human Proof, so a single human cannot mint an army of passports.
+Re-authorizing the same X account for the same wallet is a no-op success
+(the user may press Connect X again); only a different pairing is refused.
 
 A Human Proof is not KYC and not a government identity check. It is
 evidence that a real person's X account and a declared exchange UID stand

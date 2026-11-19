@@ -206,6 +206,16 @@ test("one wallet holds at most one X Binding", () => {
   );
 });
 
+test("re-recording the same wallet and X account is a no-op success", () => {
+  const store = createMemoryProofStore();
+  const first = store.recordBinding({wallet: WALLET, xUserId: X_USER_ID, xHandleHash: hashHandle("alice")});
+  // Pressing Connect X again after a confusing redirect must not fail:
+  // the same pair re-records to the same binding, with the original time.
+  const second = store.recordBinding({wallet: WALLET, xUserId: X_USER_ID, xHandleHash: hashHandle("alice")});
+  assert.deepEqual(second, first);
+  assert.equal(store.getBinding(WALLET)?.boundAt, first.boundAt);
+});
+
 test("one wallet holds at most one proof", async () => {
   const store = createMemoryProofStore();
   const account = privateKeyToAccount(generatePrivateKey());

@@ -54,7 +54,7 @@ says so.
 - The Human Proof has exactly two parts, both bound to the same wallet: the X Binding and the OKX UID Claim. Either part missing means no proof.
 - X verification uses X OAuth 2.0 with PKCE, server-side only. The server exchanges the code, reads the X user id and handle, and never sees or stores the user's X password.
 - The wallet binds itself to the X account and the UID by signing a binding message that names the wallet address, the X user id, the OKX UID, and an expiry. The server recovers the signer from the signature and rejects anything that does not match the minting wallet.
-- One X account binds to at most one wallet, and one wallet holds at most one Human Proof. A second binding attempt for an already-bound X account or wallet is refused.
+- One X account binds to at most one wallet, and one wallet holds at most one Human Proof. A second binding attempt for an already-bound X account or wallet is refused, unless it is the same wallet and X account, which re-records as a no-op success.
 - The OKX UID is stored as a hash, never in plain text on-chain, and is always labelled a user claim (ADR-0001).
 - The mint decision is server-authoritative, matching the existing safety service: the browser is an untrusted UI and the wallet remains the signing boundary. The mint service returns deploy calldata for the wallet to sign, the same shape as the existing authorize route.
 - The Mint Gate lives beside the passport contract, not inside it (ADR-0003): the existing passport contract is untouched, and two new contracts — a proof registry and a minting factory — give the official mint path an on-chain check. The honest guarantee is "every passport minted through Xaverus carries a Human Proof".
