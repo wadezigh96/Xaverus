@@ -16,7 +16,8 @@ akun X.com mereka saat minting Safety Passport.
 
 Yang kamu butuhkan: akun X.com dan browser. Tidak butuh kartu kredit —
 paket Free sudah cukup, karena Xaverus hanya membaca ID dan nama pengguna
-akun (`users.read`).
+akun (izin `tweet.read` dan `users.read` — keduanya hanya baca; X menolak
+membaca profil kalau izinnya hanya `users.read`).
 
 > **Yang penting diingat:** Client Secret itu rahasia. Jangan pernah
 > ditempel di chat, jangan pernah di-commit ke GitHub. Client ID tidak
@@ -132,9 +133,9 @@ akun (`users.read`).
 
 ## Catatan keamanan
 
-- Xaverus hanya meminta izin `users.read`: membaca ID dan nama pengguna
-  akun X. Aplikasi ini **tidak bisa** posting, membaca DM, atau mengubah
-  akun kamu.
+- Xaverus hanya meminta izin `tweet.read` dan `users.read`: membaca ID dan
+  nama pengguna akun X. Keduanya hanya baca; aplikasi ini **tidak bisa**
+  posting, membaca DM, atau mengubah akun kamu.
 - Xaverus tidak pernah meminta atau menyimpan kata sandi X kamu. Login
   selalu terjadi di situs X.com sendiri, bukan di Xaverus.
 - Client Secret hanya dipakai server untuk menukar kode otorisasi. Ia

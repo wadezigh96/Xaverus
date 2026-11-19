@@ -44,7 +44,7 @@ function stubX(over: {tokenStatus?: number; tokenBody?: unknown; userStatus?: nu
             access_token: "stub-access-token",
             token_type: "bearer",
             expires_in: 7200,
-            scope: "users.read",
+            scope: "tweet.read users.read",
           },
       };
     }
@@ -83,7 +83,7 @@ test("generated PKCE pair is URL-safe and the challenge matches the verifier", (
   assert.notEqual(createPkcePair().verifier, verifier);
 });
 
-test("authorize URL points at X with PKCE S256, users.read scope, and the state", () => {
+test("authorize URL points at X with PKCE S256, tweet.read + users.read scope, and the state", () => {
   const url = new URL(
     buildAuthorizeUrl({
       config: CONFIG,
@@ -96,7 +96,9 @@ test("authorize URL points at X with PKCE S256, users.read scope, and the state"
   assert.equal(url.searchParams.get("client_id"), CONFIG.clientId);
   assert.equal(url.searchParams.get("redirect_uri"), CONFIG.redirectUri);
   assert.equal(url.searchParams.get("scope"), X_OAUTH_SCOPE);
-  assert.equal(X_OAUTH_SCOPE, "users.read");
+  // X requires BOTH scopes for GET /2/users/me: users.read alone gets a
+  // bare 403 (confirmed live 19 Nov 2026; see X_OAUTH_SCOPE).
+  assert.equal(X_OAUTH_SCOPE, "tweet.read users.read");
   assert.equal(url.searchParams.get("state"), "state-123");
   assert.equal(url.searchParams.get("code_challenge"), "challenge-abc");
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
@@ -206,6 +208,17 @@ test("user fetch failure is a clear error", async () => {
   await assert.rejects(fetchXUser({accessToken: "bad", fetchImpl}), /user lookup failed/i);
   const badShape = stubX({userBody: {data: {id: X_USER_ID}}});
   await assert.rejects(fetchXUser({accessToken: "t", fetchImpl: badShape.fetchImpl}), /user lookup failed/i);
+});
+
+test("a failed X call carries X's error body in the message, so a 403 is diagnosable", async () => {
+  const {fetchImpl} = stubX({
+    userStatus: 403,
+    userBody: {title: "Forbidden", status: 403, detail: "Forbidden"},
+  });
+  await assert.rejects(
+    fetchXUser({accessToken: "t", fetchImpl}),
+    /user lookup failed \(HTTP 403\): \{.*"detail":"Forbidden".*\}/
+  );
 });
 
 test("completing the flow records an X Binding tied to the wallet that started it", async () => {
