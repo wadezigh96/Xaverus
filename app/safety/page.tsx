@@ -17,7 +17,7 @@ export default function Safety(){
   finally{setLoading(false);}
  }
  return <main className="market">
-  <nav className="topnav"><Link href="/" className="brand">XAVERUS<span>SAFETY PASSPORT</span></Link><div className="navlinks"><a href="/">Marketplace</a><a href="/agents">My Agents</a><a className="active" href="/safety">Safety</a><a href="/activity">Activity</a></div></nav>
+  <nav className="topnav"><Link href="/" className="brand">XAVERUS<span>SAFETY PASSPORT</span></Link><div className="navlinks"><a href="/">Marketplace</a><a href="/agents">My Agents</a><a className="active" href="/safety">Safety</a><a href="/activity">Activity</a><a href="/mint">Mint</a></div></nav>
   <section className="marketHero"><div><div className="eyebrow">SERVER-AUTHORITATIVE POLICY</div><h1>Agents act.<br/><em>Policy decides.</em></h1><p>The browser can submit an intent, but it cannot replace the active Safety Passport policy.</p><Link className="secondary" href="/">Back to Marketplace</Link></div>
    <div className="launchCard"><span>SAFETY STATUS</span><strong>{p?p.enabled?"ACTIVE":"STOPPED":"LOADING"}</strong><p>Decision-only boundary. Execution remains outside this service.</p><div className="featureList"><span>✓ Server spend cap</span><span>✓ Server daily limit</span><span>✓ Asset/network policy</span><span>✓ Kill switch state</span></div></div>
   </section>
