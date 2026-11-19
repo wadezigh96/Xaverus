@@ -356,14 +356,21 @@ See [BUILD_LOG.md](BUILD_LOG.md) and the [commit history](https://github.com/wad
 
 ## Submission
 
-**OKX Dev Day 2026 · Build a Company**
+**OKX + TapeOut — X Layer Build X Series** · Deadline:
+8 December 2026, 06:59 WIB
 
 - Repository: [github.com/wadezigh96/Xaverus](https://github.com/wadezigh96/Xaverus)
-- Live product: [xaverus.vercel.app](https://xaverus.vercel.app)
-- Demo: [YouTube](https://youtube.com/watch?v=jTOAmIWEGDs)
+- Live product: [xaverus.vercel.app](https://xaverus.vercel.app) (mint page: `/mint`)
+- New in this event: human-proof minting (X Binding via X OAuth + signed
+  OKX UID claim), TapeOut NAND policy circuit + proof anchoring, wallet
+  connect (Privy + native OKX Wallet), Vercel KV cloud memory
+- Submission draft: [docs/BUILD-X-SUBMISSION.md](docs/BUILD-X-SUBMISSION.md)
 - OKX AI service: **Xaverus Safety Check**
 - A2MCP ASP: **13805 · under review**
-- Demo duration: **3 minutes**
+- Demo video (Build X, max 3 minutes): to be recorded — previous demo
+  (OKX Dev Day 2026): [YouTube](https://youtube.com/watch?v=jTOAmIWEGDs)
+
+Previously submitted to OKX Dev Day 2026 · Build a Company.
 
 ---
 
